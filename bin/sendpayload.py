@@ -6,17 +6,16 @@ import logging
 import requests
 import configparser
 
+def setup_logging():
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s %(levelname)s %(message)s',
+        filename=os.path.join(os.environ['SPLUNK_HOME'], 'var', 'log', 'splunk', 'input_generator_dashboard_sh.log'),
+        filemode='a'
+    )
+    return logging.getLogger(__name__)
 
-def setup_logger(level):
-    logger = logging.getLogger('inputs_conf_generator_send_payload')
-    logger.setLevel(level)
-    handler = logging.handlers.RotatingFileHandler(os.environ['SPLUNK_HOME']+'/var/log/splunk/inputs_conf_generator_send_payload.log', maxBytes=1000000, backupCount=5)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
-
-logger = setup_logger(logging.DEBUG)
+logger = setup_logging()
 
 def getinfo():
     return {
@@ -33,9 +32,9 @@ def read_splunk_config_ds_url():
     logger.debug(f"Reading config file: {config_file}")
     ds_host = config.get('properties', 'ds_host')
     ds_mgmt_port = config.getint('properties', 'ds_mgmt_port')
-    # ds_token = config.get('properties', 'ds_token')
+    ds_token = config.get('properties', 'ds_token')
     logger.debug(f"ds_host: {ds_host}, ds_mgmt_port: {ds_mgmt_port}")
-    return ds_host, ds_mgmt_port
+    return ds_host, ds_mgmt_port, ds_token
 
 def parse_args(results, keywords, argvals):
     logger.debug(f"Parsing keywords: {keywords}, argvals: {argvals}")
@@ -53,19 +52,23 @@ def parse_args(results, keywords, argvals):
             logger.error(f"JSON decode error: {str(e)}")
 
 def post_to_ds(dashboard_payload):
-    ds_host, ds_mgmt_port=read_splunk_config_ds_url()
-    url = f'https://{ds_host}:{ds_mgmt_port}/servicesNS/-/-/my_rest'
-    headers = {'Content-Type': 'application/json'}
-    auth = ('admin', 'password')
+    ds_host, ds_mgmt_port, ds_token = read_splunk_config_ds_url()
+    
+    
+    url = f'https://{ds_host}:{ds_mgmt_port}/servicesNS/-/input_config_gen_endpoints_ds/my_rest'
+    headers = {'Content-Type': 'application/json',
+               'Authorization': f'Splunk {ds_token}'
+               }
+    
+    
+    logger.debug(f"header - with auth token: {headers}")
     params = {'output_mode': 'json'}
-
     try:
         logger.debug(f"Posting to URL: {url}")
         response = requests.post(
             url,
             headers=headers,
             json={'payload': json.dumps(dashboard_payload)},
-            auth=auth,
             params=params,
             verify=False
         )
