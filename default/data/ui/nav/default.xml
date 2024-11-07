@@ -1,0 +1,15 @@
+<nav search_view="search">
+    
+    <collection label="Inputs and serverclass deploy">
+        <view name="input_config_generator_dashboard" default='true'/>
+        
+    </collection>
+
+    <collection label="Configure DS">
+        <view name="setup_page_dashboard"/>
+        
+    </collection>
+    
+
+</nav>
+
