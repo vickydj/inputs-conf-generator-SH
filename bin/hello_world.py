@@ -6,16 +6,16 @@ import logging
 import requests
 import configparser
 
-def setup_logger(level):
-    logger = logging.getLogger('_send_payload_to_ds')
-    logger.setLevel(level)
-    handler = logging.handlers.RotatingFileHandler(os.environ['SPLUNK_HOME']+'/var/log/splunk/_send_payload_to_ds.log', maxBytes=1000000, backupCount=5)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
+def setup_logging():
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s %(levelname)s %(message)s',
+        filename=os.path.join(os.environ['SPLUNK_HOME'], 'var', 'log', 'splunk', 'input_generator_dashboard_sh.log'),
+        filemode='a'
+    )
+    return logging.getLogger(__name__)
 
-logger = setup_logger(logging.DEBUG)
+logger = setup_logging()
 
 def getinfo():
     return {
