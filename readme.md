@@ -1,9 +1,12 @@
+This app only works if the ds app is installed <app name>. without either of them, the functionality is broken.
+
 Currect functionality : 
 
 
 Dashboard :
 
 • Dashboard builds a json payload from pre defined set of inputs from user inputs. (LIMITED FUNCTIONALITY AS OF NOW)
+
 • Dashboard calls Custom command which invokes python to send payload to DS. If js could do this, alternatively i could use that as primary invoking method.
 
 Setup page : done over js 
