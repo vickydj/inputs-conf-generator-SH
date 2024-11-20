@@ -1,6 +1,8 @@
+#input_generator_dashboard_sh 
+
 This app only works if the ds app is installed <app name>. without either of them, the functionality is broken.
 
-Currect functionality : 
+##Current functionality : 
 
 
 Dashboard :
@@ -9,7 +11,7 @@ Dashboard :
 
 • Dashboard calls Custom command which invokes python to send payload to DS. If js could do this, alternatively i could use that as primary invoking method.
 
-Setup page : done over js 
+##Setup page : done over js 
 
 • This is user configurable from JS setup page.
 • ds_info.conf is created with host, port and token.
@@ -17,21 +19,24 @@ Setup page : done over js
 • Encrypted in passwords.conf with password storage endpoint. (unread as of now)
 
 
-=========================================
-Need to add : 
+=============================
+##Need to add : 
 
 Essentials: cannot go live before these are done
 
 Permissions :
 • Setup page to be viewed only by admins.
 • Dashboard to be viewed by power users. Optional.
-Functionality :
+
+Broken Functionality :
 • Figure out how to communicate within docker between sh and ds. I think this worked atleast once, but not now. [ revisit this ]
+
+Rename :
 • Change from helloworld.py invoking to sendpayload.py
 Renaming and public ready :
 • Change from my_rest custom endpoint to receivejsonfromsh and respective python file.
 • Dashboard or js to get custom source lists from users.
-Functionality :
+New Functionality :
 • Ability to mention source and host list in a format. Preferably done over js snippet.
 • Perform basic json payload validations on sh and ds. Check for host and source formatting.
 
