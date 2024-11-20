@@ -35,10 +35,14 @@ Essentials: cannot go live before these are done
 
 ### Renaming and public ready :
 • Change from helloworld.py invoking to sendpayload.py
+
 • Change from my_rest custom endpoint to receivejsonfromsh and respective python file.
+
 • Dashboard or js to get custom source lists from users.
+
 ### New Functionality :
 • Ability to mention source and host list in a format. Preferably done over js snippet.
+
 • Perform basic json payload validations on sh and ds. Check for host and source formatting.
 
 
