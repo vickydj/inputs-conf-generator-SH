@@ -1,4 +1,4 @@
-# input_generator_dashboard_sh 
+so# input_generator_dashboard_sh 
 
 This app only works if the ds app is installed <app name>. without either of them, the functionality is broken.
 
@@ -21,8 +21,6 @@ Dashboard :
 
 • Encrypted in passwords.conf with password storage endpoint. (unread as of now)
 
-
-=============================
 ## Need to add : 
 
 Essentials: cannot go live before these are done
