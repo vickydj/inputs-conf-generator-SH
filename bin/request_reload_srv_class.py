@@ -1,3 +1,4 @@
+import configparser
 import os
 import sys
 import logging.handlers
@@ -10,6 +11,7 @@ def setup_logger(level):
     logger = logging.getLogger('_request_reload_srv_class')
     logger.setLevel(level)
     handler = logging.handlers.RotatingFileHandler(os.environ['SPLUNK_HOME']+'/var/log/splunk/_request_reload_srv_class.log', maxBytes=1000000, backupCount=5)
+    # handler = logging.handlers.RotatingFileHandler('request_reload_srv_class.log', maxBytes=1000000, backupCount=5)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -17,37 +19,49 @@ def setup_logger(level):
 
 logger = setup_logger(logging.DEBUG)
 
-try:
-    ds_host = "ds1"
-    ds_mgmt_port = "8089"
-    ds_token = "eyJraWQiOiJzcGx1bmsuc2VjcmV0IiwiYWxnIjoiSFM1MTIiLCJ2ZXIiOiJ2MiIsInR0eXAiOiJzdGF0aWMifQ.eyJpc3MiOiJhZG1pbiBmcm9tIGRzMSIsInN1YiI6ImFkbWluIiwiYXVkIjoiaW5wdXRzX2NvbmZfZ2VuZXJhdG9yIiwiaWRwIjoiU3BsdW5rIiwianRpIjoiNjQ1MzdlZjRlMDZiMzJlMDhmNDc0OTAxOTAxY2E3ZGFhYmEzODljNjk2NDIzYWVjYTE1YTc4ZTBiM2QxZjlkOSIsImlhdCI6MTczMTAxODAwMiwiZXhwIjoxNzMzNjEwMDAyLCJuYnIiOjE3MzEwMTgwMDJ9.zaZMWGm5slG138NohaDna8Bjv150xMuDzSs2ZBOmGp7Q8cAxeal7DTzX6eHls5K8-QFy10eebBJfLGCSMDdJkQ"
-    sc = "beta_my_app1_2_3_idx_my_st"
+def read_splunk_config_ds_url():
+    config = configparser.ConfigParser()
+    config_file = os.path.join(os.environ['SPLUNK_HOME'], 'etc', 'apps', 'input_generator_dashboard_sh','local' ,'ds_info.conf')
+    config.read(config_file)
+    logger.debug(f"Reading config file: {config_file}")
+    ds_host = config.get('properties', 'ds_host')
+    ds_mgmt_port = config.getint('properties', 'ds_mgmt_port')
+    ds_token = config.get('properties', 'ds_token')
+    logger.debug(f"ds_host: {ds_host}, ds_mgmt_port: {ds_mgmt_port}")
+    return ds_host, ds_mgmt_port, ds_token
 
-    url = f'https://{ds_host}:{ds_mgmt_port}/services/deployment/server/config/_reload'
-    headers = {
+
+def request_ds_reload():
+    ds_host, ds_mgmt_port, ds_token = read_splunk_config_ds_url()
+    try:
+        url = f'https://{ds_host}:{ds_mgmt_port}/services/deployment/server/config/_reload?output_mode=json'
+        logger.debug(f"DS reload endpoint: {url}")
+
+        payload = ""
+        headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Splunk {ds_token}'
-    }
+        }
+
+        response = requests.request("POST", url, headers=headers, data=payload, verify=False)
+
+        logger.debug(f"response: {response.text}")
+        logger.debug(f"response code: {response.status_code}")
+        return response.status_code
     
-    logger.debug(f"header - with auth token: {headers}")
-    params = {'output_mode': 'json'}
-    
-    try:
-        logger.debug(f"Posting to URL: {url}")
-        response = requests.post(
-            url,
-            headers=headers,
-            json={'serverclass': sc},  # Format payload as a dictionary
-            params=params,
-            verify=False
-        )
-        response.raise_for_status()
-        logger.debug(f"Response from DS: {response.json()}")
-        
     except requests.exceptions.RequestException as e:
-        logger.error(f"Request failed: {str(e)}")
-        print(f"Request failed: {str(e)}")
+        logger.error(f"Error reloading DS: {str(e)}", exc_info=True)
+        return False
+    
+if __name__ == '__main__':
+    try:
+        logger.info("Script started")
+        logger.debug(f"sys.argv: {sys.argv}")
+        request_ds_reload()
+    except Exception as e:
+        error_message = f"Error in script execution: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        sys.exit(1)
         
-except Exception as e:
-    logger.error(f"An error occurred: {str(e)}")
-    print(f"An error occurred: {str(e)}")
+
+

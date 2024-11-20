@@ -80,7 +80,7 @@
       <event>
         <title>Payload</title>
         <search base="base_gen_payload">
-          <query>| table payload | helloworld payload</query>
+          <query>| table payload | sendpayload payload</query>
         </search>
         <option name="list.drilldown">none</option>
         <option name="refresh.display">progressbar</option>
