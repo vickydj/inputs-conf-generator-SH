@@ -1,15 +1,17 @@
+#Dashboard to generate payload
+
 This app only works if the ds app is installed <app name>. without either of them, the functionality is broken.
 
-Currect functionality : 
+##Currect functionality : 
 
 
-Dashboard :
+###Dashboard :
 
 • Dashboard builds a json payload from pre defined set of inputs from user inputs. (LIMITED FUNCTIONALITY AS OF NOW)
 
 • Dashboard calls Custom command which invokes python to send payload to DS. If js could do this, alternatively i could use that as primary invoking method.
 
-Setup page : done over js 
+###Setup page : done over js 
 
 • This is user configurable from JS setup page.
 • ds_info.conf is created with host, port and token.
@@ -18,14 +20,14 @@ Setup page : done over js
 
 
 =========================================
-Need to add : 
+##Need to add : 
 
 Essentials: cannot go live before these are done
 
-Permissions :
+##Permissions :
 • Setup page to be viewed only by admins.
 • Dashboard to be viewed by power users. Optional.
-Functionality :
+##Functionality :
 • Figure out how to communicate within docker between sh and ds. I think this worked atleast once, but not now. [ revisit this ]
 • Change from helloworld.py invoking to sendpayload.py
 Renaming and public ready :
