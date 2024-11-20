@@ -14,8 +14,11 @@ Dashboard :
 ## Setup page : done over js 
 
 • This is user configurable from JS setup page.
+
 • ds_info.conf is created with host, port and token.
+
 • Token is stored as clear text in ds_info.conf
+
 • Encrypted in passwords.conf with password storage endpoint. (unread as of now)
 
 
@@ -26,6 +29,7 @@ Essentials: cannot go live before these are done
 
 ### Permissions :
 • Setup page to be viewed only by admins.
+
 • Dashboard to be viewed by power users. Optional.
 
 ### Broken Functionality :
@@ -48,11 +52,17 @@ Essentials: cannot go live before these are done
 ## Feature enhancements:
 
 • Get list of UF from DS, read token from ds_info.conf
+
 • Add username to payload. And add in inputs.conf.
+
 • Read password from endpoint and remove from ds_info.conf
+
 • Populate setup page if configured.
+
 • replicate the dashboard with a js script page to generate payload.
+
 • Add validations to setup page.
+
 • Add validations to payload generation page.
    
 
