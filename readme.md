@@ -3,23 +3,51 @@ Currect functionality :
 
 Dashboard :
 
-    Dashboard builds a payload from pre defined set of inputs from user inputs.
-    Custom command invokes python to send payload to DS.
+• Dashboard builds a json payload from pre defined set of inputs from user inputs. (LIMITED FUNCTIONALITY AS OF NOW)
+• Dashboard calls Custom command which invokes python to send payload to DS. If js could do this, alternatively i could use that as primary invoking method.
 
-Setup page :
+Setup page : done over js 
 
-    This is user configurable from JS setup page.
-    ds_info.conf is created with host, port and token.
-    Token is clear text stored. 
-    Encrypted in passwords.conf with password storage endpoint. (unread as of now)
+• This is user configurable from JS setup page.
+• ds_info.conf is created with host, port and token.
+• Token is stored as clear text in ds_info.conf
+• Encrypted in passwords.conf with password storage endpoint. (unread as of now)
 
 
+=========================================
 Need to add : 
 
-    Figure out how to communicate within docker between sh and ds
-    Change from helloworld.py invoking to sendpayload.py
-    1 custom source lists
-    2 get list of UF from DS
-    Read password from endpoint and remove from ds_info.conf
+Essentials: cannot go live before these are done
+
+Permissions :
+• Setup page to be viewed only by admins.
+• Dashboard to be viewed by power users. Optional.
+Functionality :
+• Figure out how to communicate within docker between sh and ds. I think this worked atleast once, but not now. [ revisit this ]
+• Change from helloworld.py invoking to sendpayload.py
+Renaming and public ready :
+• Change from my_rest custom endpoint to receivejsonfromsh and respective python file.
+• Dashboard or js to get custom source lists from users.
+Functionality :
+• Ability to mention source and host list in a format. Preferably done over js snippet.
+• Perform basic json payload validations on sh and ds. Check for host and source formatting.
+
+
+
+<can go live without this but essential>
+• 
+• 
+
+Feature enhancements:
+
+• Get list of UF from DS, read token from ds_info.conf
+• Add username to payload. And add in inputs.conf.
+• Read password from endpoint and remove from ds_info.conf
+• Populate setup page if configured.
+• replicate the dashboard with a js script page to generate payload.
+• Add validations to setup page.
+• Add validations to payload generation page.
+   
+
 
 
