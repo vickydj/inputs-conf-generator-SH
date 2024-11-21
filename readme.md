@@ -36,7 +36,7 @@ Essentials: cannot go live before these are done
 ### Renaming and public ready :
 • ~~Change from helloworld.py invoking to sendpayload.py~~
 
-• ~~Change from my_rest custom endpoint to receivejsonfromsh and respective python file~~~
+• ~~Change from my_rest custom endpoint to receivejsonfromsh and respective python file~~
 
 • Dashboard or js to get custom source lists from users.
 
@@ -46,16 +46,6 @@ Essentials: cannot go live before these are done
 • Perform basic json payload validations on sh and ds. Check for host and source formatting.
 
 Add cron field to setup page js - store in ds_info.conf ( try to add this to inputs.conf 0 scripted inputs)
-
-
-
-
-
-
-
-
-
-
 
 <can go live without this but essential>
 nothing here
