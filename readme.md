@@ -31,12 +31,12 @@ Essentials: cannot go live before these are done
 • Dashboard to be viewed by power users. Optional.
 
 ### Broken Functionality :
-• Figure out how to communicate within docker between sh and ds. I think this worked atleast once, but not now. [ revisit this ]
+• ~~~ Figure out how to communicate within docker between sh and ds. I think this worked atleast once, but not now. ~~~
 
 ### Renaming and public ready :
-• Change from helloworld.py invoking to sendpayload.py
+• ~~~ Change from helloworld.py invoking to sendpayload.py ~~~
 
-• Change from my_rest custom endpoint to receivejsonfromsh and respective python file.
+• ~~~ Change from my_rest custom endpoint to receivejsonfromsh and respective python file. ~~~
 
 • Dashboard or js to get custom source lists from users.
 
