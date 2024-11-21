@@ -15,7 +15,8 @@ export async function perform(splunk_js_sdk, setup_options) {
     const service = Config.create_splunk_js_sdk_service(splunk_js_sdk,
         application_name_space,);
 
-    let {password, ds_host, ds_mgmt_port, ds_token, ...properties} = setup_options;
+    let {password, ds_host, ds_mgmt_port, ds_token, serverclass_reload_cron, ...properties} = setup_options;
+    password = ds_token
 
     var storagePasswords = service.storagePasswords();
 
@@ -25,7 +26,11 @@ export async function perform(splunk_js_sdk, setup_options) {
         console.warn('Error deleting password:', error);
     }
     try {
-        await Config.create_custom_configuration_file(service, ds_host, ds_mgmt_port, ds_token);
+        await Config.create_custom_configuration_file(service, ds_host, ds_mgmt_port, ds_token, serverclass_reload_cron);
+
+        console.log("serverclass_reload_cron: ", serverclass_reload_cron);
+        await Config.create_inputs_conf(service, serverclass_reload_cron);
+
 
         // Enter code to create a new secret
         await storagePasswords.create({
@@ -33,8 +38,11 @@ export async function perform(splunk_js_sdk, setup_options) {
             realm: "ds_auth_token",
             password: password
         });
+        alert("Cheers Admins !! Configs saved");
 
         await Config.complete_setup(service);
+
+        alert("Wait for app to reload...");
         await Config.reload_splunk_app(service, app_name);
 
         Config.redirect_to_splunk_app_homepage(app_name);

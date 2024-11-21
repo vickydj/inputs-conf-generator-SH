@@ -55,7 +55,7 @@ def post_to_ds(dashboard_payload):
     ds_host, ds_mgmt_port, ds_token = read_splunk_config_ds_url()
     
     
-    url = f'https://{ds_host}:{ds_mgmt_port}/servicesNS/-/input_config_gen_endpoints_ds/my_rest'
+    url = f'https://{ds_host}:{ds_mgmt_port}/servicesNS/-/input_config_gen_endpoints_ds/receive_payload'
     headers = {'Content-Type': 'application/json',
                'Authorization': f'Splunk {ds_token}'
                }
@@ -84,9 +84,10 @@ def stream(results, keywords, argvals):
     logger.debug(f"Input results: {results}")
     try:
         dashboard_payload = parse_args(results, keywords, argvals)
+        logger.debug(f"Message dashboard_payload : {dashboard_payload}")
         logger.debug(f"Sent payload: {post_to_ds(dashboard_payload)}")
         # dashboard_payload = json.dumps(dashboard_payload, indent=2)
-        logger.debug(f"Message dashboard_payload : {dashboard_payload}")
+        
 
         yield {
             'payload': f"dashboard_payload: {dashboard_payload}",
@@ -112,7 +113,7 @@ if __name__ == '__main__':
             results, dummyresults, settings = splunk.Intersplunk.getOrganizedResults()
             keywords, argvals = splunk.Intersplunk.getKeywordsAndOptions()
             streaming_results = list(stream(results, keywords, argvals))
-            logger.debug(f"Streaming_results : {streaming_results}")
+            # logger.debug(f"Streaming_results : {streaming_results}")
 
             # splunk.Intersplunk.outputResults("output to splunk test")
             # splunk.Intersplunk.outputResults(streaming_results)

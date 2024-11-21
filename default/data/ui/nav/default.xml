@@ -5,7 +5,7 @@
         
     </collection>
 
-    <collection label="Configure DS">
+    <collection label="For Admins - Configure">
         <view name="setup_page_dashboard"/>
         
     </collection>
