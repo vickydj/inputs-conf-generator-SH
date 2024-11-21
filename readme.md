@@ -31,7 +31,7 @@ Essentials: cannot go live before these are done
 • Dashboard to be viewed by power users. Optional.
 
 ### Broken Functionality :
-• ~~~ Figure out how to communicate within docker between sh and ds. I think this worked atleast once, but not now. ~~~
+• ~~ Figure out how to communicate within docker between sh and ds. I think this worked atleast once, but not now. ~~
 
 ### Renaming and public ready :
 • ~~~ Change from helloworld.py invoking to sendpayload.py ~~~
