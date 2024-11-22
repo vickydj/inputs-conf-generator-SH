@@ -15,9 +15,15 @@
       <label>Source Type</label>
       <default>my_st</default>
     </input>
-    <input type="text" token="my_sources">
+    <input type="multiselect" token="my_sources">
       <label>Source List [\"/path/to/file/file1.log\", \"/path/to/file/file2.log\",\"/path/to/file/file3.log\"]</label>
       <default>[\"/path/to/file/file1.log\", \"/path/to/file/file2.log\",\"/path/to/file/file3.log\"]</default>
+      <prefix>[</prefix>
+      <suffix>]</suffix>
+      <valuePrefix>\"</valuePrefix>
+      <valueSuffix>\"</valueSuffix>
+      <delimiter>,</delimiter>
+      <choice value="test">test</choice>
     </input>
     <input type="multiselect" token="my_host_list" searchWhenChanged="false">
       <label>Host List</label>

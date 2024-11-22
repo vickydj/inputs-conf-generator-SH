@@ -15,7 +15,7 @@ modtime = 1731010401.918217000
 [app/install]
 owner = admin
 version = 9.3.1
-modtime = 1732224130.508099000
+modtime = 1732277280.019026000
 
 [ds_info/default]
 owner = admin
@@ -25,15 +25,15 @@ modtime = 1732175873.379698000
 [ds_info/properties]
 owner = admin
 version = 9.3.1
-modtime = 1732224130.042854000
+modtime = 1732277279.434340000
 
 [views/input_config_generator_dashboard]
 version = 9.3.1
-modtime = 1732124834.818486000
+modtime = 1732283796.088097000
 
 [views/setup_page_dashboard]
 version = 9.3.1
-modtime = 1732211679.710829000
+modtime = 1732224812.348843000
 
 [inputs/test]
 owner = admin
@@ -43,9 +43,14 @@ modtime = 1732220987.533089000
 [inputs/script%3A%2F%2F%24SPLUNK_HOME%2Fetc%2Fapps%2Finput_generator_dashboard_sh%2Fbin%2Frequest_reload_srv_class.py]
 owner = admin
 version = 9.3.1
-modtime = 1732223081.336644000
+modtime = 1732275452.682877000
 
 [inputs/script%3A%2F%2F%24SPLUNK_HOME%2Fetc%2Fapps%2Finput_generator_dashboard_sh%2Fbin%2Fsendpayload.py]
 owner = admin
 version = 9.3.1
 modtime = 1732219093.696731000
+
+[passwords/credential%3Ads_auth_token%3Anobody%3A]
+owner = admin
+version = 9.3.1
+modtime = 1732277279.722224000

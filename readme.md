@@ -21,6 +21,8 @@ Dashboard :
 
 • Encrypted in passwords.conf with password storage endpoint. (unread as of now)
 
+
+
 ## Need to add : 
 
 Essentials: cannot go live before these are done
@@ -38,16 +40,16 @@ Essentials: cannot go live before these are done
 
 • ~~Change from my_rest custom endpoint to receivejsonfromsh and respective python file~~
 
+### New Functionality :
 • Dashboard or js to get custom source lists from users.
 
-### New Functionality :
 • Ability to mention source and host list in a format. Preferably done over js snippet.
 
 • Perform basic json payload validations on sh and ds. Check for host and source formatting.
 
-Add cron field to setup page js - store in ds_info.conf ( try to add this to inputs.conf 0 scripted inputs)
+~~Add cron field to setup page js - store in ds_info.conf ( try to add this to inputs.conf - scripted inputs)~~
 
-<can go live without this but essential>
+### can go live without this but essential 
 nothing here
 
 ## Feature enhancements:
@@ -65,6 +67,8 @@ nothing here
 • Add validations to setup page.
 
 • Add validations to payload generation page.
+
+
    
 
 
