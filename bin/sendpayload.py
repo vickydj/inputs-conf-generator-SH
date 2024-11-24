@@ -46,7 +46,7 @@ def parse_args(results, keywords, argvals):
             json_string = result['payload']
             try:
                 # Parse the JSON string
-                return json.loads(json_string)
+                return (json_string)
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse JSON: {json_string}")
             logger.error(f"JSON decode error: {str(e)}")

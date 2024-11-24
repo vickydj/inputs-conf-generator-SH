@@ -1,4 +1,21 @@
-define(["react", "splunkjs/splunk"], function(react, splunk_js_sdk) {
+define([
+  "react", 
+  "splunkjs/splunk",
+  'underscore',
+  'jquery',
+  'splunkjs/mvc',
+  'splunkjs/mvc/utils',
+  'splunkjs/mvc/tokenutils',
+  'splunkjs/mvc/simplexml/ready!'
+], function(
+  react, 
+  splunk_js_sdk,
+  _,
+  $,
+  SplunkMVC,  // Changed name to be more explicit
+  utils, 
+  TokenUtils
+) {
   const e = react.createElement;
 
   const Logger = {
@@ -12,35 +29,34 @@ define(["react", "splunkjs/splunk"], function(react, splunk_js_sdk) {
       console.warn(`[WARN] ${message}`, data || '');
     }
   };
+  const TokenManager = {
+    initialize: function() {
+      try {
+        // Get the default token model
+        const defaultTokens = SplunkMVC.Components.get('default');
+        
+        if (!defaultTokens) {
+          throw new Error('Could not get default token model');
+        }
 
-  const styles = {
-    payloadSection: {
-      margin: '20px 0',
-      padding: '15px',
-      backgroundColor: '#f5f5f5',
-      borderRadius: '4px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.12)'
-    },
-    pre: {
-      whiteSpace: 'pre-wrap',
-      wordWrap: 'break-word',
-      backgroundColor: '#fff',
-      padding: '10px',
-      border: '1px solid #ddd',
-      borderRadius: '4px',
-      fontSize: '14px'
-    },
-    copyButton: {
-      padding: '5px 10px',
-      margin: '10px 0',
-      backgroundColor: '#007bff',
-      color: 'white',
-      border: 'none',
-      borderRadius: '4px',
-      cursor: 'pointer'
+        Logger.info("Token initialization successful");
+        
+        // Read and log field1 value
+        const field1Value = defaultTokens.get("field1");
+        Logger.info("Field1 token value:", field1Value); 
+        
+        // Set jspayload value
+        defaultTokens.set("jspayload", "pong");
+        Logger.info("jspayload token value:", defaultTokens.get("jspayload")); 
+
+        return defaultTokens;
+      } catch (error) {
+        Logger.error("Error initializing tokens:", error);
+        return null;
+      }
     }
   };
-
+  
   class PayloadConfigPage extends react.Component {
     constructor(props) {
       super(props);
@@ -64,23 +80,86 @@ define(["react", "splunkjs/splunk"], function(react, splunk_js_sdk) {
       this.handleChange = this.handleChange.bind(this);
       this.handleSubmit = this.handleSubmit.bind(this);
       this.copyToClipboard = this.copyToClipboard.bind(this);
+      this.tokens = null;
+    }
+
+    shapeString(input) {
+      // Convert JSON object to string
+      let jsonString = JSON.stringify(input, null, 2);
+      
+      // Replace double quotes with single quotes
+      jsonString = jsonString.replace(/"/g, "'");
+      
+      // Remove extra spaces around colons
+      jsonString = jsonString.replace(/:\s+/g, ': ');
+      
+      return jsonString;
+    }
+
+    
+    componentDidMount() {
+      // Initialize tokens when component mounts
+      this.tokens = TokenManager.initialize();
+    
+      if (this.tokens) {
+        // Initialize component with token value if it exists
+        const field1Value = this.tokens.get("field1");
+        if (field1Value) {
+          // this.setState({ message_payload: field1Value });
+          Logger.info("mount : field1 " + field1Value);
+        }
+    
+        // Add token change listener
+        this.tokens.on("change:field1", this.handleTokenChange.bind(this));
+      }
     }
     
+    handleTokenChange(model, value, options) {
+      Logger.info("Token changed field1:", value);
+      // this.setState({ message_payload: value });
+    }
+    
+    componentWillUnmount() {
+      // Clean up token listeners
+      if (this.tokens) {
+        this.tokens.off("unmount change:field1", this.handleTokenChange);
+      }
+    }
+   
     handleChange(event) {
       const { name, value } = event.target;
       Logger.info(`Form field changed: ${name}`, { value });
-      
+    
       try {
-        this.setState({ ...this.state, [name]: value });
+        this.setState(
+          prevState => ({ ...prevState, [name]: value }),
+          () => {
+            // Update tokens when relevant fields change
+            if (name === 'message_payload' && this.tokens) {
+              this.tokens.set("jspayload", value);
+            }
+    
+            // Update field1 token with the generated payload
+            if (name === 'severity') {
+              const payload = this.generatePayload();
+              if (this.tokens) {
+                this.tokens.set("field1", JSON.stringify(payload, null, 2));
+                Logger.info("Token field1 updated:", this.tokens.get("field1"));
+              }
+            }
+          }
+        );
       } catch (error) {
         Logger.error('Error updating state:', error);
       }
     }
 
+
+
     generatePayload() {
       const sourceArray = this.state.my_source.split(',').map(item => item.trim());
       const hostArray = this.state.my_host.split(',').map(item => item.trim());
-
+    
       return {
         message: this.state.message_payload,
         severity: this.state.severity,
@@ -110,41 +189,35 @@ define(["react", "splunkjs/splunk"], function(react, splunk_js_sdk) {
       }
     }
 
+    
+
     async handleSubmit(event) {
       event.preventDefault();
       this.setState({ isSubmitting: true });
-      Logger.info('Form submission started');
-    
-      try {
-        const payload = this.generatePayload();
-        Logger.info('Generated payload:', payload);
-        
-        // Update state with generated payload
-        this.setState({ 
-          generatedPayload: payload,
-          isSubmitting: false 
-        });
+      this.tokens.set("jspayload", "test");
 
-        // Optional: Send to Splunk
-        const service = new splunk_js_sdk.Service();
-        const myIndex = service.indexes().item(this.state.my_index);
-        
-        await myIndex.submitEvent({
-          data: JSON.stringify(payload),
-          sourcetype: this.state.my_sourcetype,
-          source: this.state.my_source[0],
-          host: this.state.my_host[0],
-          time: Date.now()
-        });
-    
-        Logger.info('Payload sent successfully to Splunk dashboard');
-      } catch (error) {
-        Logger.error('Failed to process payload:', error);
-        alert("Error processing payload. Please check console for details.");
-      } finally {
-        this.setState({ isSubmitting: false });
-      }
+      const payload = this.generatePayload();
+      this.setState({ generatedPayload: payload }, () => {
+        Logger.info('Generated payload:', payload);
+        if (this.tokens) {
+          try {
+            const payloadString = JSON.stringify(payload, null, 2);
+            const shaped_payload=this.shapeString(payloadString)
+            Logger.info('Shaped payload:', shaped_payload);
+            this.tokens.set("jspayload", shaped_payload);
+            Logger.info("Token jspayload updated:", this.tokens.get("jspayload"));
+          } catch (error) {
+            Logger.error("Error setting token:", error);
+          }
+        }
+      });
+
+      this.setState({ isSubmitting: false });
     }
+
+
+
+
 
     render() {
       return e("div", { className: "setup-container" }, [
@@ -169,7 +242,7 @@ define(["react", "splunkjs/splunk"], function(react, splunk_js_sdk) {
               name: "message_payload", 
               value: this.state.message_payload, 
               onChange: this.handleChange,
-              required: true
+              required: false
             })
           ]),
           // Severity
@@ -180,7 +253,7 @@ define(["react", "splunkjs/splunk"], function(react, splunk_js_sdk) {
               name: "severity",
               value: this.state.severity,
               onChange: this.handleChange,
-              required: true
+              required: false
             }, [
               e("option", { value: "info" }, "Info"),
               e("option", { value: "warning" }, "Warning"),
@@ -196,7 +269,7 @@ define(["react", "splunkjs/splunk"], function(react, splunk_js_sdk) {
               name: "my_index", 
               value: this.state.my_index, 
               onChange: this.handleChange,
-              required: true
+              required: false
             })
           ]),
           // Sourcetype
@@ -208,7 +281,7 @@ define(["react", "splunkjs/splunk"], function(react, splunk_js_sdk) {
               name: "my_sourcetype", 
               value: this.state.my_sourcetype, 
               onChange: this.handleChange,
-              required: true
+              required: false
             })
           ]),
           // Source (comma-separated)
@@ -221,7 +294,7 @@ define(["react", "splunkjs/splunk"], function(react, splunk_js_sdk) {
               value: this.state.my_source, 
               onChange: this.handleChange,
               placeholder: "/path/to/file1.log, /path/to/file2.log",
-              required: true
+              required: false
             })
           ]),
           // Host (comma-separated)
@@ -234,7 +307,7 @@ define(["react", "splunkjs/splunk"], function(react, splunk_js_sdk) {
               value: this.state.my_host, 
               onChange: this.handleChange,
               placeholder: "hostname1, hostname2",
-              required: true
+              required: false
             })
           ]),
           // App Name
@@ -246,7 +319,7 @@ define(["react", "splunkjs/splunk"], function(react, splunk_js_sdk) {
               name: "app_name", 
               value: this.state.app_name, 
               onChange: this.handleChange,
-              required: true
+              required: false
             })
           ]),
           // Environment
@@ -258,7 +331,7 @@ define(["react", "splunkjs/splunk"], function(react, splunk_js_sdk) {
               name: "environment", 
               value: this.state.environment, 
               onChange: this.handleChange,
-              required: true
+              required: false
             })
           ]),
           // Version
@@ -270,10 +343,10 @@ define(["react", "splunkjs/splunk"], function(react, splunk_js_sdk) {
               name: "version", 
               value: this.state.version, 
               onChange: this.handleChange,
-              required: true
+              required: false
             })
           ]),
-          // ... other form groups ...
+          
 
           // Submit Button
           e("div", { className: "form-group" }, 
@@ -288,15 +361,15 @@ define(["react", "splunkjs/splunk"], function(react, splunk_js_sdk) {
 
         // Payload Display Section
         this.state.generatedPayload && e("div", { 
-          style: styles.payloadSection 
+          
         }, [
           e("h3", null, "Generated Payload"),
           e("button", {
             onClick: this.copyToClipboard,
-            style: styles.copyButton
+            
           }, this.state.copySuccess ? "Copied!" : "Copy to Clipboard"),
           e("pre", { 
-            style: styles.pre 
+            
           }, JSON.stringify(this.state.generatedPayload, null, 2))
         ])
       ]);

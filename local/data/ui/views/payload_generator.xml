@@ -1,0 +1,32 @@
+<dashboard isDashboard="false" script="javascript/payload_generator.js" stylesheet="styles/setup_page.css" version="1.1">
+  <label>Build payload</label>
+  <row>
+    <panel>
+      <html>
+                <div id="main_container"/>
+            </html>
+    </panel>
+    <panel>
+      <table>
+        <search id="base_generate_payload">
+          <query>| makeresults | eval payload="$jspayload$"
+| table payload</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <search base="base_generate_payload">
+          <query>| table payload | sendpayload payload
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</dashboard>
