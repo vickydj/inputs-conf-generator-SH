@@ -4,7 +4,7 @@ import * as Splunk from './splunk_helpers.js'
 import * as Config from './setup_configuration.js'
 
 export async function perform(splunk_js_sdk, setup_options) {
-    var app_name = "input_generator_dashboard_sh";
+    var app_name = "input_conf_generator_sh";
 
     var application_name_space = {
         owner: "nobody",

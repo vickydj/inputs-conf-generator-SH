@@ -30,7 +30,7 @@ async function create_inputs_conf(splunk_js_sdk_service, serverclass_reload_cron
   console.log("Updating inputs.conf with cron", serverclass_reload_cron);
  
   const configuration_file_name = "inputs";
-  const stanza_name = "script://$SPLUNK_HOME/etc/apps/input_generator_dashboard_sh/bin/request_reload_srv_class.py"
+  const stanza_name = "script://$SPLUNK_HOME/etc/apps/input_conf_generator_sh/bin/request_reload_srv_class.py"
   const properties_to_update = {
       interval: serverclass_reload_cron,
       disabled: "false",

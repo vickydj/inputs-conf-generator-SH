@@ -10,7 +10,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)s %(levelname)s %(message)s',
-        filename=os.path.join(os.environ['SPLUNK_HOME'], 'var', 'log', 'splunk', 'input_generator_dashboard_sh.log'),
+        filename=os.path.join(os.environ['SPLUNK_HOME'], 'var', 'log', 'splunk', 'input_conf_generator_sh.log'),
         filemode='a'
     )
     return logging.getLogger(__name__)
@@ -27,7 +27,7 @@ def getinfo():
 #function to read splunk config file
 def read_splunk_config_ds_url():
     config = configparser.ConfigParser()
-    config_file = os.path.join(os.environ['SPLUNK_HOME'], 'etc', 'apps', 'input_generator_dashboard_sh','local' ,'ds_info.conf')
+    config_file = os.path.join(os.environ['SPLUNK_HOME'], 'etc', 'apps', 'input_conf_generator_sh','local' ,'ds_info.conf')
     config.read(config_file)
     logger.debug(f"Reading config file: {config_file}")
     ds_host = config.get('properties', 'ds_host')
@@ -55,7 +55,7 @@ def post_to_ds(dashboard_payload):
     ds_host, ds_mgmt_port, ds_token = read_splunk_config_ds_url()
     
     
-    url = f'https://{ds_host}:{ds_mgmt_port}/servicesNS/-/input_config_gen_endpoints_ds/receive_payload'
+    url = f'https://{ds_host}:{ds_mgmt_port}/servicesNS/-/input_conf_generator_ds/receive_payload'
     headers = {'Content-Type': 'application/json',
                'Authorization': f'Splunk {ds_token}'
                }

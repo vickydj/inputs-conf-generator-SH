@@ -40,12 +40,12 @@ owner = admin
 version = 9.3.1
 modtime = 1732220987.533089000
 
-[inputs/script%3A%2F%2F%24SPLUNK_HOME%2Fetc%2Fapps%2Finput_generator_dashboard_sh%2Fbin%2Frequest_reload_srv_class.py]
+[inputs/script%3A%2F%2F%24SPLUNK_HOME%2Fetc%2Fapps%2Finput_conf_generator_sh%2Fbin%2Frequest_reload_srv_class.py]
 owner = admin
 version = 9.3.1
 modtime = 1732275452.682877000
 
-[inputs/script%3A%2F%2F%24SPLUNK_HOME%2Fetc%2Fapps%2Finput_generator_dashboard_sh%2Fbin%2Fsendpayload.py]
+[inputs/script%3A%2F%2F%24SPLUNK_HOME%2Fetc%2Fapps%2Finput_conf_generator_sh%2Fbin%2Fsendpayload.py]
 owner = admin
 version = 9.3.1
 modtime = 1732219093.696731000

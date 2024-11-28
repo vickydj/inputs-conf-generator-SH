@@ -70,7 +70,7 @@ const Logger = {
       
       return e("div", { className: "setup-container" }, [
         e("header", { className: "setup-header" }, [
-          e("h2", null, "Configure App input_generator_dashboard_sh"),
+          e("h2", null, "Configure App input_conf_generator_sh"),
           e("h3", null, "Please enter the necessary configuration items for inputs and other related configuration to be created and deployed."),
           e("h3", null, "All Fields are Required."),
           e("h3", null, "Author: Vignesh Narendran"),

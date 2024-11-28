@@ -3,7 +3,7 @@ import { promisify } from './util.js'
 async function sendPayloadToEndpoint(payload) {
     try {
         console.log('attempting to send payload', payload)
-        const endpoint = 'https://ds1:8089/servicesNS/-/input_config_gen_endpoints_ds/receive_payload';
+        const endpoint = 'https://ds1:8089/servicesNS/-/input_conf_generator_ds/receive_payload';
         console.log('Sending payload to endpoint:', endpoint);
         
         // Add proper headers including CORS and authentication

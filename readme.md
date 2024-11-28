@@ -1,4 +1,4 @@
-# input_generator_dashboard_sh 
+# input_conf_generator_sh 
 
 This app only works if the ds app is installed <app name>. without either of them, the functionality is broken.
 

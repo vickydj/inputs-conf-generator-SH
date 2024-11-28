@@ -1,6 +1,6 @@
 "use strict";
 
-var app_name = "./input_generator_dashboard_sh";
+var app_name = "./input_conf_generator_sh";
 
 require.config({
     paths: {

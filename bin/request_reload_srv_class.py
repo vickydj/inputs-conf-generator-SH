@@ -8,9 +8,9 @@ from urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 def setup_logger(level):
-    logger = logging.getLogger('_request_reload_srv_class')
+    logger = logging.getLogger('input_conf_generator_sh')
     logger.setLevel(level)
-    handler = logging.handlers.RotatingFileHandler(os.environ['SPLUNK_HOME']+'/var/log/splunk/_request_reload_srv_class.log', maxBytes=1000000, backupCount=5)
+    handler = logging.handlers.RotatingFileHandler(os.environ['SPLUNK_HOME']+'/var/log/splunk/input_conf_generator_sh.log', maxBytes=1000000, backupCount=5)
     # handler = logging.handlers.RotatingFileHandler('request_reload_srv_class.log', maxBytes=1000000, backupCount=5)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
@@ -21,7 +21,7 @@ logger = setup_logger(logging.DEBUG)
 
 def read_splunk_config_ds_url():
     config = configparser.ConfigParser()
-    config_file = os.path.join(os.environ['SPLUNK_HOME'], 'etc', 'apps', 'input_generator_dashboard_sh','local' ,'ds_info.conf')
+    config_file = os.path.join(os.environ['SPLUNK_HOME'], 'etc', 'apps', 'input_conf_generator_sh','local' ,'ds_info.conf')
     config.read(config_file)
     logger.debug(f"Reading config file: {config_file}")
     ds_host = config.get('properties', 'ds_host')
