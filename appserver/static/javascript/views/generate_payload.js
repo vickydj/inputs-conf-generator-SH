@@ -12,7 +12,7 @@ define([
   splunk_js_sdk,
   _,
   $,
-  SplunkMVC,  // Changed name to be more explicit
+  SplunkMVC,  
   utils, 
   TokenUtils
 ) {
@@ -234,7 +234,9 @@ define([
           
           // Message Payload
           e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "message_payload" }, "Message"),
+            e("label", { htmlFor: "message_payload", className: "required" }, "Message"),
+
+
             e("input", { 
               type: "text", 
               id: "message_payload",
@@ -247,7 +249,7 @@ define([
           ]),
           // Precedence
           e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "precedence" }, "Precedence - Don't change unless you are overriding the lower precedence app"),
+            e("label", { htmlFor: "precedence", className: "required"  }, "Precedence - Don't change unless you are overriding the lower precedence app"),
             e("select", {
               id: "precedence",
               name: "precedence",
@@ -262,7 +264,7 @@ define([
           ]),
           // Index
           e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "my_index" }, "Index"),
+            e("label", { htmlFor: "my_index", className: "required"  }, "Index"),
             e("input", { 
               type: "text", 
               id: "my_index",
@@ -274,7 +276,7 @@ define([
           ]),
           // Sourcetype
           e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "my_sourcetype" }, "Sourcetype"),
+            e("label", { htmlFor: "my_sourcetype", className: "required"  }, "Sourcetype"),
             e("input", { 
               type: "text", 
               id: "my_sourcetype",
@@ -286,7 +288,7 @@ define([
           ]),
           // Source (comma-separated)
           e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "my_source" }, "Source Paths (comma-separated)"),
+            e("label", { htmlFor: "my_source", className: "required"  }, "Source Paths (comma-separated)"),
             e("input", { 
               type: "text", 
               id: "my_source",
@@ -299,7 +301,7 @@ define([
           ]),
           // Host (comma-separated)
           e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "my_host" }, "Hosts (comma-separated)"),
+            e("label", { htmlFor: "my_host", className: "required"  }, "Hosts (comma-separated)"),
             e("input", { 
               type: "text", 
               id: "my_host",
@@ -312,20 +314,20 @@ define([
           ]),
           // App Name
           e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "app_name" }, "App Name"),
+            e("label", { htmlFor: "app_name", className: "required"  }, "App Name"),
             e("input", { 
               type: "text", 
               id: "app_name",
               name: "app_name", 
               value: this.state.app_name, 
               onChange: this.handleChange,
-              placeholder: "my_apache_logs",
+              placeholder: "my_apache_log",
               required: true
             })
           ]),
           // Environment
           e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "environment" }, "Environment"),
+            e("label", { htmlFor: "environment", className: "required"  }, "Environment"),
             e("input", { 
               type: "text", 
               id: "environment",
@@ -345,7 +347,7 @@ define([
               name: "version", 
               value: this.state.version, 
               onChange: this.handleChange,
-              placeholder: "1.0.0",
+              placeholder: "1.0.0 - feature not yet implemented",
               required: false
             })
           ]),
@@ -367,6 +369,7 @@ define([
           e("h3", null, "Generated Payload"),
           e("button", {
             onClick: this.copyToClipboard,
+            className: "copy-button"
             
           }, this.state.copySuccess ? "Copied!" : "Copy to Clipboard"),
           e("pre", { 

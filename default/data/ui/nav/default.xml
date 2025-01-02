@@ -1,12 +1,12 @@
 <nav search_view="search">
     
-    <collection label="Inputs and serverclass deploy">
+    <collection label="Self Service - onboard logs">
         
         <view name="payload_generator" default='true'/>
         
     </collection>
 
-    <collection label="For Admins - Configure">
+    <collection label="For Admins only - Configure">
         <view name="setup_page_dashboard"/>
         
     </collection>

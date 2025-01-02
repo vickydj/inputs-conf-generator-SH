@@ -42,7 +42,7 @@
       <table>
         <title>Send payload &lt;no preview&gt;</title>
         <search>
-          <query>| makeresults | eval payload="$jspayload$" | sendpayload paylaod</query>
+          <query>| makeresults | eval payload="$jspayload$" | sendpayload payload</query>
           <earliest>0</earliest>
           <latest></latest>
         </search>
