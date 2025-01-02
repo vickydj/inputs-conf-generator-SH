@@ -1,7 +1,7 @@
 <nav search_view="search">
     
     <collection label="Inputs and serverclass deploy">
-        <view name="input_config_generator_dashboard"/>
+        
         <view name="payload_generator" default='true'/>
         
     </collection>

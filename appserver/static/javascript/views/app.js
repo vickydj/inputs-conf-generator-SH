@@ -120,14 +120,14 @@ const Logger = {
             })
           ]),
           e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "serverclass_reload_cron" }, "Server Class Reload Schedule (Cron Expression)"),
+            e("label", { htmlFor: "serverclass_reload_cron" }, "Server Class Reload Schedule (Cron Expression OR Frequency in seconds)"),
             e("input", { 
               type: "text", 
               id: "serverclass_reload_cron",
               name: "serverclass_reload_cron", 
               value: this.state.serverclass_reload_cron, 
               onChange: this.handleChange,
-              placeholder: "*/30 * * * *",
+              placeholder: "*/30 * * * * OR 30]",
               required: true,
 
             })

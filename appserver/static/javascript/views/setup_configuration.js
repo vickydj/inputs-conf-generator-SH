@@ -1,6 +1,7 @@
 import { promisify } from './util.js'
 import * as SplunkHelpers from './splunk_helpers.js'
 
+//create ds_info.conf
 async function create_custom_configuration_file(  splunk_js_sdk_service,  ds_host,  ds_mgmt_port,  ds_token ) 
 {
   console.log("Updating ds_info.conf")
@@ -15,7 +16,10 @@ async function create_custom_configuration_file(  splunk_js_sdk_service,  ds_hos
   await SplunkHelpers.update_configuration_file(splunk_js_sdk_service,custom_configuration_file_name,stanza_name,properties_to_update,);
 };
 
+//update app.conf - is_configured
 async function complete_setup(splunk_js_sdk_service) {
+  console.log("setup_configuration.js called");
+  
   var configuration_file_name = "app";
   var stanza_name = "install";
   var properties_to_update = {
@@ -26,7 +30,9 @@ async function complete_setup(splunk_js_sdk_service) {
   await SplunkHelpers.update_configuration_file(splunk_js_sdk_service,configuration_file_name,stanza_name,properties_to_update,);
 };
 
-async function create_inputs_conf(splunk_js_sdk_service, serverclass_reload_cron) {
+//configure scripted inputs for reload srvclass
+async function create_inputs_conf(splunk_js_sdk_service, serverclass_reload_cron) 
+{
   console.log("Updating inputs.conf with cron", serverclass_reload_cron);
  
   const configuration_file_name = "inputs";
@@ -37,12 +43,7 @@ async function create_inputs_conf(splunk_js_sdk_service, serverclass_reload_cron
   };
 
   try {
-      await SplunkHelpers.update_configuration_file(
-          splunk_js_sdk_service,
-          configuration_file_name,
-          stanza_name,
-          properties_to_update,
-      );
+      await SplunkHelpers.update_configuration_file(splunk_js_sdk_service,configuration_file_name,stanza_name,properties_to_update,);
       console.log("updated inputs.conf");
   } catch (error) {
       console.error("Error updating inputs.conf:", error);
@@ -51,10 +52,8 @@ async function create_inputs_conf(splunk_js_sdk_service, serverclass_reload_cron
 }
 
 
-async function reload_splunk_app(
-  splunk_js_sdk_service,
-  app_name,
-) {
+async function reload_splunk_app(  splunk_js_sdk_service,  app_name,) 
+{
   var splunk_js_sdk_apps = splunk_js_sdk_service.apps();
   await promisify(splunk_js_sdk_apps.fetch)();
 
@@ -62,18 +61,15 @@ async function reload_splunk_app(
   await promisify(current_app.reload)();
 };
 
-function redirect_to_splunk_app_homepage(
-  app_name,
-) {
+function redirect_to_splunk_app_homepage(  app_name,) 
+{
   var redirect_url = "/app/" + app_name;
 
   window.location.href = redirect_url;
 };
 
-function create_splunk_js_sdk_service(
-  splunk_js_sdk,
-  application_name_space,
-) {
+function create_splunk_js_sdk_service(  splunk_js_sdk,  application_name_space,)
+{
   var http = new splunk_js_sdk.SplunkWebHttp();
 
   var splunk_js_sdk_service = new splunk_js_sdk.Service(

@@ -38,11 +38,11 @@ export async function perform(splunk_js_sdk, setup_options) {
             realm: "ds_auth_token",
             password: password
         });
-        alert("Cheers Admins !! Configs saved");
+        alert("Cheers Admins !! Configs saved, wait for reload");
 
         await Config.complete_setup(service);
 
-        alert("Wait for app to reload...");
+        
         await Config.reload_splunk_app(service, app_name);
 
         Config.redirect_to_splunk_app_homepage(app_name);

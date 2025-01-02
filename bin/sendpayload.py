@@ -5,17 +5,18 @@ import json
 import logging
 import requests
 import configparser
+from splunklib.searchcommands import dispatch, StreamingCommand, Configuration, Option, validators
 
-def setup_logging():
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s %(levelname)s %(message)s',
-        filename=os.path.join(os.environ['SPLUNK_HOME'], 'var', 'log', 'splunk', 'input_conf_generator_sh.log'),
-        filemode='a'
-    )
-    return logging.getLogger(__name__)
+def setup_logger(level):
+    logger = logging.getLogger('input_conf_generator_sh')
+    logger.setLevel(level)
+    handler = logging.handlers.RotatingFileHandler(os.environ['SPLUNK_HOME']+'/var/log/splunk/input_conf_generator_sh.log', maxBytes=1000000, backupCount=5)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    return logger
 
-logger = setup_logging()
+logger = setup_logger(logging.DEBUG)
 
 def getinfo():
     return {
@@ -45,7 +46,6 @@ def parse_args(results, keywords, argvals):
         if 'payload' in result:
             json_string = result['payload']
             try:
-                # Parse the JSON string
                 return (json_string)
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse JSON: {json_string}")
@@ -61,7 +61,7 @@ def post_to_ds(dashboard_payload):
                }
     
     
-    logger.debug(f"header - with auth token: {headers}")
+    # logger.debug(f"header - with auth token: {headers}")
     params = {'output_mode': 'json'}
     try:
         logger.debug(f"Posting to URL: {url}")
@@ -86,11 +86,10 @@ def stream(results, keywords, argvals):
         dashboard_payload = parse_args(results, keywords, argvals)
         logger.debug(f"Message dashboard_payload : {dashboard_payload}")
         logger.debug(f"Sent payload: {post_to_ds(dashboard_payload)}")
-        # dashboard_payload = json.dumps(dashboard_payload, indent=2)
         
 
         yield {
-            'payload': f"dashboard_payload: {dashboard_payload}",
+            'return_payload': f"dashboard_payload: {dashboard_payload}",
             'status': 200
         }
         splunk.Intersplunk.outputResults([    {"_raw": "payload sent successfully"}])
@@ -113,11 +112,15 @@ if __name__ == '__main__':
             results, dummyresults, settings = splunk.Intersplunk.getOrganizedResults()
             keywords, argvals = splunk.Intersplunk.getKeywordsAndOptions()
             streaming_results = list(stream(results, keywords, argvals))
-            # logger.debug(f"Streaming_results : {streaming_results}")
+            logger.debug(f"Streaming_results : {streaming_results}")
+            splunk.Intersplunk.outputResults(streaming_results)
+            results = [ {"output": "Sent payload to DS", "output": "Execution complete"}]
+            
 
-            # splunk.Intersplunk.outputResults("output to splunk test")
+            splunk.Intersplunk.outputResults(results)
             # splunk.Intersplunk.outputResults(streaming_results)
     except Exception as e:
         error_message = f"Error in script execution: {str(e)}"
+        splunk.Intersplunk.generateErrorResults(str(e))
         logger.error(error_message, exc_info=True)
         sys.exit(1)

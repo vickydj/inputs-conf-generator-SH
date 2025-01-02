@@ -1,14 +1,54 @@
-<dashboard isDashboard="false"
-           script="javascript/payload_generator.js"
-           stylesheet="styles/setup_page.css"
-           version="1.1">
-      <label>Build payload</label>
-    <row>
-        <panel>
-            <html>
-                <div id="main_container"></div>
-            </html>
-        </panel>
-    </row>
-</dashboard>
-
+<form isDashboard="false" script="javascript/payload_generator.js" stylesheet="styles/setup_page.css" version="1.1">
+  <label>Build and send payload</label>
+  <fieldset submitButton="true">
+    <input type="checkbox" token="consent_token1" searchWhenChanged="false">
+      <label>Consent after generating payload</label>
+      <fieldForLabel>consent_field</fieldForLabel>
+      <fieldForValue>consent_field</fieldForValue>
+      <search>
+        <query>| makeresults 
+| eval payload="$jspayload$"
+| eval consent_field=if(payload=="pong", "", "I agree and take responsibility of my action to set splunk monitor the mentioned files in mentioned hosts.") | table payload consent_field</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+      <delimiter> </delimiter>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Build payload with parameters.</title>
+      <html>
+          <div id="main_container"/>
+      </html>
+    </panel>
+    <panel depends="$consent_token1$">
+      <title>Payload preflight to DS</title>
+      <table>
+        <title>Json deconstructed to support Splunk integration</title>
+        <search>
+          <query>| makeresults 
+| eval payload="$jspayload$"
+| eval output=case(
+    "$consent_token1$"=="I agree and take responsibility of my action to set splunk monitor the mentioned files in mentioned hosts.", payload,
+    1==1, "Generate payload and hit the agree checkbox to proceed"
+  ) | table output</query>
+          <earliest>0</earliest>
+          <latest></latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">preview</option>
+      </table>
+      <table>
+        <title>Send payload &lt;no preview&gt;</title>
+        <search>
+          <query>| makeresults | eval payload="$jspayload$" | sendpayload paylaod</query>
+          <earliest>0</earliest>
+          <latest></latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">preview</option>
+      </table>
+    </panel>
+  </row>
+</form>

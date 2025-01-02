@@ -8,10 +8,9 @@ from urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 def setup_logger(level):
-    logger = logging.getLogger('input_conf_generator_sh')
+    logger = logging.getLogger('input_conf_generator_srv_class')
     logger.setLevel(level)
-    handler = logging.handlers.RotatingFileHandler(os.environ['SPLUNK_HOME']+'/var/log/splunk/input_conf_generator_sh.log', maxBytes=1000000, backupCount=5)
-    # handler = logging.handlers.RotatingFileHandler('request_reload_srv_class.log', maxBytes=1000000, backupCount=5)
+    handler = logging.handlers.RotatingFileHandler(os.environ['SPLUNK_HOME']+'/var/log/splunk/input_conf_generator_srv_class.log', maxBytes=1000000, backupCount=5)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)

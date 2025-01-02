@@ -64,7 +64,7 @@ define([
     
       this.state = {
         message_payload: '',
-        severity: 'info',
+        precedence: 'low',
         my_index: '',
         my_sourcetype: '',
         my_source: '',
@@ -136,16 +136,17 @@ define([
           () => {
             // Update tokens when relevant fields change
             if (name === 'message_payload' && this.tokens) {
-              this.tokens.set("jspayload", value);
+              // this.tokens.set("jspayload", value);
             }
     
             // Update field1 token with the generated payload
-            if (name === 'severity') {
-              const payload = this.generatePayload();
-              if (this.tokens) {
-                this.tokens.set("field1", JSON.stringify(payload, null, 2));
-                Logger.info("Token field1 updated:", this.tokens.get("field1"));
-              }
+            if (name === 'precedence' && this.tokens) {
+              // const payload = this.generatePayload();
+
+              // this.tokens.set("field1", JSON.stringify(payload, null, 2));
+              this.tokens.set("field1", value)
+              Logger.info("Token field1 updated:", this.tokens.get("field1"));
+              
             }
           }
         );
@@ -162,7 +163,7 @@ define([
     
       return {
         message: this.state.message_payload,
-        severity: this.state.severity,
+        precedence: this.state.precedence,
         my_index: this.state.my_index,
         my_sourcetype: this.state.my_sourcetype,
         my_source: sourceArray,
@@ -206,6 +207,7 @@ define([
             Logger.info('Shaped payload:', shaped_payload);
             this.tokens.set("jspayload", shaped_payload);
             Logger.info("Token jspayload updated:", this.tokens.get("jspayload"));
+            alert("Cheers !! Payload generated, now you can hit the agree checkbox and submit on the top of the page !!")
           } catch (error) {
             Logger.error("Error setting token:", error);
           }
@@ -214,9 +216,6 @@ define([
 
       this.setState({ isSubmitting: false });
     }
-
-
-
 
 
     render() {
@@ -232,7 +231,7 @@ define([
           onSubmit: this.handleSubmit, 
           className: "setup-form"
         }, [
-          // Form groups remain the same as in your original code
+          
           // Message Payload
           e("div", { className: "form-group" }, [
             e("label", { htmlFor: "message_payload" }, "Message"),
@@ -242,22 +241,23 @@ define([
               name: "message_payload", 
               value: this.state.message_payload, 
               onChange: this.handleChange,
-              required: false
+              placeholder: "RFC123456 / JIRA1234 - Create monitor on apache logs",
+              required: true
             })
           ]),
-          // Severity
+          // Precedence
           e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "severity" }, "Severity"),
+            e("label", { htmlFor: "precedence" }, "Precedence - Don't change unless you are overriding the lower precedence app"),
             e("select", {
-              id: "severity",
-              name: "severity",
-              value: this.state.severity,
+              id: "precedence",
+              name: "precedence",
+              value: this.state.precedence,
               onChange: this.handleChange,
-              required: false
+              required: true
             }, [
-              e("option", { value: "info" }, "Info"),
-              e("option", { value: "warning" }, "Warning"),
-              e("option", { value: "error" }, "Error")
+              e("option", { value: "low" }, "Low"),
+              e("option", { value: "normal" }, "Normal"),
+              e("option", { value: "higher" }, "Higher")
             ])
           ]),
           // Index
@@ -269,7 +269,7 @@ define([
               name: "my_index", 
               value: this.state.my_index, 
               onChange: this.handleChange,
-              required: false
+              required: true
             })
           ]),
           // Sourcetype
@@ -281,7 +281,7 @@ define([
               name: "my_sourcetype", 
               value: this.state.my_sourcetype, 
               onChange: this.handleChange,
-              required: false
+              required: true
             })
           ]),
           // Source (comma-separated)
@@ -294,7 +294,7 @@ define([
               value: this.state.my_source, 
               onChange: this.handleChange,
               placeholder: "/path/to/file1.log, /path/to/file2.log",
-              required: false
+              required: true
             })
           ]),
           // Host (comma-separated)
@@ -307,7 +307,7 @@ define([
               value: this.state.my_host, 
               onChange: this.handleChange,
               placeholder: "hostname1, hostname2",
-              required: false
+              required: true
             })
           ]),
           // App Name
@@ -319,7 +319,8 @@ define([
               name: "app_name", 
               value: this.state.app_name, 
               onChange: this.handleChange,
-              required: false
+              placeholder: "my_apache_logs",
+              required: true
             })
           ]),
           // Environment
@@ -331,7 +332,8 @@ define([
               name: "environment", 
               value: this.state.environment, 
               onChange: this.handleChange,
-              required: false
+              placeholder: "test OR qa OR dev OR prod OR anything you like ;)",
+              required: true
             })
           ]),
           // Version
@@ -343,6 +345,7 @@ define([
               name: "version", 
               value: this.state.version, 
               onChange: this.handleChange,
+              placeholder: "1.0.0",
               required: false
             })
           ]),
@@ -360,9 +363,7 @@ define([
         ]),
 
         // Payload Display Section
-        this.state.generatedPayload && e("div", { 
-          
-        }, [
+        this.state.generatedPayload && e("div", {  className: "form-group" }, [
           e("h3", null, "Generated Payload"),
           e("button", {
             onClick: this.copyToClipboard,
