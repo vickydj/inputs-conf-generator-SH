@@ -1,0 +1,189 @@
+/* Main container styles */
+.setup-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+  
+  /* Header styles */
+  .setup-header {
+    margin-bottom: 30px;
+    text-align: center;
+  }
+  
+  .setup-header h2 {
+    color: #16191f;
+    font-size: 28px;
+    margin-bottom: 10px;
+  }
+  
+  .setup-header h3 {
+    color: #5f6b7a;
+    font-size: 18px;
+    font-weight: normal;
+  }
+  
+  /* Form styles */
+  .setup-form {
+    background-color: #ffffff;
+    border-radius: 8px;
+    padding: 25px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  /* Label styles */
+  .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #16191f;
+    font-weight: 500;
+  }
+  
+  /* Required field indicator */
+  .required:after {
+    content: " *";
+    color: #d13212;
+  }
+  
+  /* Input field styles */
+  .form-group input[type="text"],
+  .form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+  }
+  
+  .form-group input[type="text"]:focus,
+  .form-group select:focus {
+    outline: none;
+    border-color: #0073bb;
+    box-shadow: 0 0 0 2px rgba(0, 115, 187, 0.2);
+  }
+  
+  /* Select dropdown styles */
+  .form-group select {
+    background-color: white;
+    cursor: pointer;
+  }
+  
+  /* Button styles */
+  .submit-button,
+  .copy-button {
+    background-color: #0073bb;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .submit-button:hover,
+  .copy-button:hover {
+    background-color: #005d95;
+  }
+  
+  .submit-button:disabled {
+    background-color: #cbd5e1;
+    cursor: not-allowed;
+  }
+  
+  .copy-button {
+    margin-bottom: 10px;
+    background-color: #16191f;
+  }
+  
+  .copy-button:hover {
+    background-color: #2c3543;
+  }
+  
+  /* Generated payload display */
+  pre {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 15px;
+    overflow-x: auto;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  
+  /* Error states */
+  .form-group input:invalid {
+    border-color: #d13212;
+  }
+  
+  /* Placeholder text */
+  ::placeholder {
+    color: #94a3b8;
+  }
+  
+  /* Responsive design */
+  @media (max-width: 768px) {
+    .setup-container {
+      padding: 10px;
+    }
+    
+    .setup-form {
+      padding: 15px;
+    }
+    
+    .setup-header h2 {
+      font-size: 24px;
+    }
+    
+    .setup-header h3 {
+      font-size: 16px;
+    }
+    
+    .submit-button,
+    .copy-button {
+      width: 100%;
+    }
+  }
+  
+  /* Loading state */
+  .loading {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+  
+  /* Success message */
+  .success-message {
+    color: #059669;
+    background-color: #ecfdf5;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 10px;
+    text-align: center;
+  }
+  
+  /* Error message */
+  .error-message {
+    color: #dc2626;
+    background-color: #fef2f2;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 10px;
+    text-align: center;
+  }
+  
+  /* Horizontal rule */
+  hr {
+    border: 0;
+    height: 1px;
+    background-color: #e2e8f0;
+    margin: 20px 0;
+  }
+  

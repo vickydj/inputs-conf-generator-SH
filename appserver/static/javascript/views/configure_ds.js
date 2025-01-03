@@ -70,13 +70,10 @@ const Logger = {
       
       return e("div", { className: "setup-container" }, [
         e("header", { className: "setup-header" }, [
-            e("h2", null, "Input Configuration Generator Setup"),
-            e("h3", null, "Configuration Wizard"),
+            
+            e("h2", null, "Configuration Wizard"),
             e("p", { className: "setup-description" }, 
                 "Please provide the required configuration parameters below. These settings will be used to communicate with deployment-server ."
-            ),
-            e("p", { className: "setup-note" }, 
-                "Note: All fields must be completed to proceed."
             ),
             e("p", { className: "setup-author" }, 
                 "Developed by Vignesh Narendran"
