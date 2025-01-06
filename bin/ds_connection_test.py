@@ -51,16 +51,11 @@ def test_ds_connection(config_file):
         
         
         ds_url = f"https://{ds_host}:{ds_mgmt_port}/services/apps/local"
-        logger.debug(f"Using URL with FQDN: {ds_url}")
-        
         headers = {
             'Authorization': f'Bearer {ds_token}'
         }
         try:
             response = requests.get(ds_url, headers=headers, verify=False)
-
-
-                
             logger.debug(f"response: {response}")
             
             if response.status_code == 200:
