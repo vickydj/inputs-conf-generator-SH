@@ -5,15 +5,17 @@ This app only works if the peer - ds app is installed <app name>, and set up pag
 ## Current functionality : 
 
 
-Dashboard :
+### Self-service form 
 
 - Admins will need to generate an auth token from DS and configure the setup page with required details.
   
 - Dashboard builds a json payload from user inputs. 
 
-- Dashboard calls custom command which invokes python to send payload to DS. 
+- Dashboard calls custom command which invokes python to send payload to DS.
 
-## Setup page : done over js 
+- Store the payload in a text file, for reference.
+
+### Setup page
 
 - This is admin configurable from JS setup page.
 
