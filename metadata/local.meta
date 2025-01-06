@@ -1,15 +1,27 @@
 [ds_info/properties]
 version = 9.3.1
-modtime = 1735845589.335542000
+modtime = 1736088499.308647000
 
 [inputs/script%3A%2F%2F%24SPLUNK_HOME%2Fetc%2Fapps%2Finput_conf_generator_sh%2Fbin%2Frequest_reload_srv_class.py]
 version = 9.3.1
-modtime = 1735845589.441753000
+modtime = 1736088499.425666000
 
 [passwords/credential%3Ads_auth_token%3Anobody%3A]
 version = 9.3.1
-modtime = 1735845589.549008000
+modtime = 1736073811.113056000
 
 [app/install]
 version = 9.3.1
-modtime = 1735845591.586002000
+modtime = 1736073821.461908000
+
+[app/install/install_source_checksum]
+version = 9.3.1
+modtime = 1736070665.234590000
+
+[ds_info/default]
+version = 9.3.1
+modtime = 1736073806.623031000
+
+[inputs/script%3A%2F%2F%24SPLUNK_HOME%2Fetc%2Fapps%2Finput_conf_generator_sh%2Fbin%2Fmonitor_ds_connection.py]
+version = 9.3.1
+modtime = 1736090545.711472000

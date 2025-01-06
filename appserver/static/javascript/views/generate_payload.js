@@ -71,7 +71,7 @@ define([
         my_host: '',
         app_name: '',
         environment: '',
-        version: '',
+        version: '1.0.0',
         isSubmitting: false,
         generatedPayload: null,
         copySuccess: false
@@ -221,7 +221,7 @@ define([
     render() {
       return e("div", { className: "setup-container" }, [
         e("header", { className: "setup-header" }, [
-          e("h2", null, "Configure Payload Generator"),
+          e("h2", null, "Self service - add monitor form"),
           e("h3", null, "Please enter the necessary configuration items"),
         ]),
     

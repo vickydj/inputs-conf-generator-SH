@@ -41,9 +41,9 @@ Essentials: cannot go live before these are done
 • ~~Change from my_rest custom endpoint to receivejsonfromsh and respective python file~~
 
 ### New Functionality :
-• Dashboard or js to get custom source lists from users.
+• ~~Dashboard or js to get custom source lists from users~~
 
-• Ability to mention source and host list in a format. Preferably done over js snippet.
+• ~~Ability to mention source and host list in a format. Preferably done over js snippet~~
 
 • Perform basic json payload validations on sh and ds. Check for host and source formatting.
 

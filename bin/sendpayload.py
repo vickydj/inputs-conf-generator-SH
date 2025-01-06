@@ -94,9 +94,10 @@ def stream(results, keywords, argvals):
 
         # Prepare result dictionary
         result = {
-            "payload": dashboard_payload,
-            "status": "success" if post_success else "failed",
-            "_raw": f"Payload sent: {dashboard_payload}, Status: {'success' if post_success else 'failed'}"
+            "status" : "success",
+            "_raw": f"Payload sent successfully",
+            "return_payload": "return payload"
+
         }
 
         # Output the result to Splunk
@@ -121,25 +122,6 @@ def stream(results, keywords, argvals):
         # Yield the error result to handle in streaming context
         yield error_result
 
-# def stream(results, keywords, argvals):
-#     logger.info("Stream function called")
-#     logger.debug(f"Input results: {results}")
-#     try:
-#         dashboard_payload = parse_args(results, keywords, argvals)
-#         logger.debug(f"Message dashboard_payload : {dashboard_payload}")
-#         logger.debug(f"Sent payload: {post_to_ds(dashboard_payload)}")
-        
-
-#         yield {
-#             'return_payload': f"dashboard_payload: {dashboard_payload}",
-#             'status': 200
-#         }
-#         splunk.Intersplunk.outputResults([    {"_raw": "payload sent successfully"}])
-
-#     except Exception as e:
-#         logger.error(f"Error in stream function: {str(e)}", exc_info=True)
-#         raise
-
 if __name__ == '__main__':
     try:
         logger.info("Script started")
@@ -159,12 +141,6 @@ if __name__ == '__main__':
 
             results, dummyresults, settings = splunk.Intersplunk.getOrganizedResults()
             
-            ###### to remove 
-            logger.debug(f"Results: {results}")
-            logger.debug(f"Dummy results: {dummyresults}")
-            logger.debug(f"Settings: {settings}")
-            ######
-
             # Retrieve keywords and options from Splunk
             keywords, argvals = splunk.Intersplunk.getKeywordsAndOptions()
 

@@ -30,5 +30,12 @@ require([
         container.appendChild(payloadDiv);
     }
 
+    if (!document.getElementById('ds_conn_test')) {
+        const ds_conn_test_Div = document.createElement('div');
+        ds_conn_test_Div.id = 'ds_conn_test';
+        container.appendChild(ds_conn_test_Div);
+        
+    }
+
     ReactDOM.render(myApp, container);
 });
