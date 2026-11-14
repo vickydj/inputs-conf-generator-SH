@@ -8,3 +8,7 @@ metadata/local.meta
 *.backup
 *.tar.gz
 *.spl
+
+# Build output from ci/validate_app.py
+dist/
+*.tgz

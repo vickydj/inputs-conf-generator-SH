@@ -107,6 +107,7 @@ def get_ds_token(service):
 
 def _ssl_context(settings):
     if not settings["ssl_verify"]:
+        # ci: allow-insecure-tls: only when an admin sets ssl_verify = false (lab use); a warning is logged.
         context = ssl.create_default_context()
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE

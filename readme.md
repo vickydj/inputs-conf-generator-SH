@@ -85,6 +85,34 @@ Leave `tests/`, `.git` and `local/` out of the package. Check it with
 [Splunk AppInspect](https://dev.splunk.com/enterprise/docs/developapps/testvalidate/appinspect/):
 `splunk-appinspect inspect input_conf_generator_sh.tgz --mode precert`.
 
+## Pre-merge validation
+
+Every pull request runs `.github/workflows/validate.yml` (**Validate Splunk app**). It must pass before a merge:
+
+| Check | Fails when |
+|---|---|
+| Tests | any unit or end-to-end test fails |
+| Hygiene | `local/`, `metadata/local.meta`, `*.backup`, bytecode or build output is committed |
+| Secrets | a JWT/auth token, `$7$` secret, private key or AWS key is committed, or a cleartext password, token or secret appears in a `.conf` file |
+| Security | a REST endpoint has `requireAuthentication = false`, `web.conf` exposes an endpoint, or Python disables TLS verification without a `# ci: allow-insecure-tls: <reason>` comment |
+| `.conf` sanity | there are duplicate stanzas or keys, or whitespace after a line continuation |
+| JavaScript | a syntax error (`node --check`) |
+| AppInspect | Splunk AppInspect 4.4.0 (precert) reports any failure or error. The report is uploaded as a build artifact |
+
+**Make it required (one-time, by a repo admin):** GitHub → *Settings* → *Branches* (or *Rules → Rulesets*) →
+add a rule for `master` → enable *Require a pull request before merging* and *Require status checks to pass* →
+select **Validate Splunk app**. Optionally also enable *Require branches to be up to date* and *Do not allow bypassing*.
+
+**Run it locally** (Python 3.13+; install `pip install splunk-appinspect` to include AppInspect):
+
+```bash
+python3 -m unittest discover -s tests
+python3 ci/validate_app.py              # add --require-appinspect to match CI exactly
+git config core.hooksPath ci/hooks      # optional: run the checks automatically before every git push
+```
+
+Copies of `ci/validate_app.py` are kept identical in both repos (SH and DS). Change both together.
+
 ## Changelog
 
 ### 1.1.0
