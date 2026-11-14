@@ -41,21 +41,21 @@ modtime = 1732705277.322399000
 
 
 [passwords/credential%3Ads_auth_token%3Anobody%3A]
-access = read : [ admin ], write : [ admin ]
+access = read : [ admin, sc_admin ], write : [ admin, sc_admin ]
 export = none
 owner = admin
 version = 9.3.1
 modtime = 1732705277.408028000
 
 [views/setup_page_dashboard]
-access = read : [ admin ], write : [ admin ]
+access = read : [ admin, sc_admin ], write : [ admin, sc_admin ]
 export = none
 owner = nobody
 version = 9.3.1
 modtime = 1732880677.281348000
 
 [views/payload_generator]
-access = read : [ admin, power ], write : [ admin, power ]
+access = read : [ admin, sc_admin, power ], write : [ admin, sc_admin, power ]
 export = none
 owner = nobody
 version = 9.3.1

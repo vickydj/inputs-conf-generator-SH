@@ -54,7 +54,8 @@ Every pull request runs `.github/workflows/validate.yml`. It fails if:
 Make **Validate Splunk app** a required status check on `master`. Locally, `python3 -m unittest discover -s tests`
 and `node --test tests/*.test.mjs` (Node 22+) run the tests.
 
-Requires Splunk Enterprise 10.2+ (Python 3.13/3.14).
+Supports Splunk Enterprise 10.x and 9.x. Python 3 only: `python.required = 3.9, 3.13, 3.14` picks 3.13/3.14 on 10.x
+and 3.9 on 9.3/9.4; 9.0–9.2 use their Python 3.7. CI keeps the code 3.7-compatible.
 
 ## Feature enhancements:
 

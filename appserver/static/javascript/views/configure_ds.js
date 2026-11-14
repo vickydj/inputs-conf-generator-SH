@@ -15,7 +15,7 @@ define(["react", "splunkjs/splunk"], function(react, splunk_js_sdk){
 
   // [name, label, required, placeholder, type]
   const FIELDS = [
-    ["ds_host", "DS Address (IP Address or Hostname)", true, "10.0.0.1 [OR] ds.example.com", "text"],
+    ["ds_host", "DS Address (IP Address or Hostname)", true, "ds.example.com", "text"],
     ["ds_mgmt_port", "DS Management Port", true, "8089", "text"],
     ["ds_token", "DS Auth Token", true, "", "password"],
     ["serverclass_reload_cron", "Server Class Reload Schedule (Cron Expression OR Frequency in seconds)", false,
