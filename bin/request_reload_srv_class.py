@@ -1,66 +1,46 @@
-import configparser
+"""Scripted input: asks the DS to reload its server classes, so newly generated
+deployment apps and whitelist entries are picked up.
+
+Writes one key=value event per run (sourcetype input_conf_generator:status).
+Needs passAuth = splunk-system-user in inputs.conf.
+"""
+
 import os
 import sys
-import logging.handlers
-import json
-import requests
-from urllib3.exceptions import InsecureRequestWarning
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-def setup_logger(level):
-    logger = logging.getLogger('input_conf_generator_srv_class')
-    logger.setLevel(level)
-    handler = logging.handlers.RotatingFileHandler(os.environ['SPLUNK_HOME']+'/var/log/splunk/input_conf_generator_srv_class.log', maxBytes=1000000, backupCount=5)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-logger = setup_logger(logging.DEBUG)
+import input_conf_generator_common as common  # noqa: E402
 
-def read_splunk_config_ds_url():
-    config = configparser.ConfigParser()
-    config_file = os.path.join(os.environ['SPLUNK_HOME'], 'etc', 'apps', 'input_conf_generator_sh','local' ,'ds_info.conf')
-    config.read(config_file)
-    logger.debug(f"Reading config file: {config_file}")
-    ds_host = config.get('properties', 'ds_host')
-    ds_mgmt_port = config.getint('properties', 'ds_mgmt_port')
-    ds_token = config.get('properties', 'ds_token')
-    logger.debug(f"ds_host: {ds_host}, ds_mgmt_port: {ds_mgmt_port}")
-    return ds_host, ds_mgmt_port, ds_token
+logger = common.setup_logger("input_conf_generator_srv_class")
 
 
-def request_ds_reload():
-    ds_host, ds_mgmt_port, ds_token = read_splunk_config_ds_url()
+def main():
     try:
-        url = f'https://{ds_host}:{ds_mgmt_port}/services/deployment/server/config/_reload?output_mode=json'
-        logger.debug(f"DS reload endpoint: {url}")
+        service = common.service_from_token(common.read_session_key_from_stdin())
+        settings = common.get_settings(service)
+        token = common.get_ds_token(service)
+    except common.ConfigurationError as exc:
+        logger.error("%s", exc)
+        print(common.kv_event(check="ds_reload", status="not_configured", message=exc))
+        return 1
 
-        payload = ""
-        headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Splunk {ds_token}'
-        }
-
-        response = requests.request("POST", url, headers=headers, data=payload, verify=False)
-
-        logger.debug(f"response: {response.text}")
-        logger.debug(f"response code: {response.status_code}")
-        return response.status_code
-    
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error reloading DS: {str(e)}", exc_info=True)
-        return False
-    
-if __name__ == '__main__':
     try:
-        logger.info("Script started")
-        logger.debug(f"sys.argv: {sys.argv}")
-        request_ds_reload()
-    except Exception as e:
-        error_message = f"Error in script execution: {str(e)}"
-        logger.error(error_message, exc_info=True)
-        sys.exit(1)
-        
+        status, body = common.ds_request(settings, token, "POST", common.DS_RELOAD_PATH, logger=logger)
+    except Exception as exc:
+        logger.exception("DS reload request failed")
+        print(common.kv_event(check="ds_reload", status="unreachable", ds_host=settings["ds_host"], message=exc))
+        return 1
+
+    ok = 200 <= status < 300
+    if ok:
+        logger.info("DS reload requested, http_status=%s", status)
+    else:
+        logger.error("DS reload failed, http_status=%s body=%s", status, body)
+    print(common.kv_event(check="ds_reload", status="ok" if ok else "error",
+                          ds_host=settings["ds_host"], http_status=status))
+    return 0 if ok else 1
 
 
+if __name__ == "__main__":
+    sys.exit(main())

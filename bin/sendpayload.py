@@ -1,161 +1,76 @@
-import sys
-import os
-import splunk.Intersplunk
+"""| sendpayload payload=<json or base64 json> [dryrun=<bool>]
+
+Generating command, a thin wrapper around POST /services/input_conf_generator/send.
+It runs as the searching user, so the input_conf_generator_send capability
+(restmap.conf) decides who can use it. The command never touches the DS token.
+
+Example:
+    | sendpayload dryrun=t payload="{\"message\":\"RFC1\",\"my_index\":\"web\", ...}"
+"""
+
+import base64
+import binascii
 import json
-import logging
-import requests
-import configparser
-from splunklib.searchcommands import dispatch, StreamingCommand, Configuration, Option, validators
+import os
+import sys
+import time
 
-def setup_logger(level):
-    logger = logging.getLogger('input_conf_generator_sh')
-    logger.setLevel(level)
-    handler = logging.handlers.RotatingFileHandler(os.environ['SPLUNK_HOME']+'/var/log/splunk/input_conf_generator_sh.log', maxBytes=1000000, backupCount=5)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-logger = setup_logger(logging.DEBUG)
+from splunklib.binding import HTTPError  # noqa: E402
+from splunklib.searchcommands import Configuration, GeneratingCommand, Option, dispatch, validators  # noqa: E402
 
-def getinfo():
-    return {
-        'args': ['msg'],
-        'description': 'Sends payload to configured DS in a predefined format. This payload is process by another application to generate configs.',
-        'streaming': True
-    }
+SEND_PATH = "/services/input_conf_generator/send"
 
-#function to read splunk config file
-def read_splunk_config_ds_url():
-    config = configparser.ConfigParser()
-    config_file = os.path.join(os.environ['SPLUNK_HOME'], 'etc', 'apps', 'input_conf_generator_sh','local' ,'ds_info.conf')
-    config.read(config_file)
-    logger.debug(f"Reading config file: {config_file}")
-    ds_host = config.get('properties', 'ds_host')
-    ds_mgmt_port = config.getint('properties', 'ds_mgmt_port')
-    ds_token = config.get('properties', 'ds_token')
-    logger.debug(f"ds_host: {ds_host}, ds_mgmt_port: {ds_mgmt_port}")
-    return ds_host, ds_mgmt_port, ds_token
 
-def parse_args(results, keywords, argvals):
-    logger.debug(f"Parsing keywords: {keywords}, argvals: {argvals}")
+def decode_payload(raw):
+    raw = (raw or "").strip()
+    if not raw.startswith("{"):
+        try:
+            raw = base64.b64decode(raw, validate=True).decode("utf-8")
+        except (binascii.Error, UnicodeDecodeError):
+            raise ValueError("payload must be a JSON object or base64-encoded JSON")
+    return json.loads(raw)
 
-    # Get the first result (assuming there's at least one)
-    if results:
-        result = results[0]
-        if 'payload' in result:
-            json_string = result['payload']
+
+def flatten(prefix, value, out):
+    if isinstance(value, dict):
+        for key, inner in value.items():
+            flatten(f"{prefix}.{key}" if prefix else key, inner, out)
+    elif isinstance(value, list):
+        out[prefix] = value if value else ""
+    else:
+        out[prefix] = value
+    return out
+
+
+@Configuration(type="reporting", distributed=False)
+class SendPayloadCommand(GeneratingCommand):
+    payload = Option(require=True, doc="Payload as JSON, or base64-encoded JSON (dashboard-safe).")
+    dryrun = Option(require=False, default=False, validate=validators.Boolean(),
+                    doc="Validate on the DS and report what would change, without writing.")
+
+    def generate(self):
+        try:
+            payload = decode_payload(self.payload)
+        except ValueError as exc:
+            yield {"_time": time.time(), "status": "error", "message": str(exc)}
+            return
+
+        body = json.dumps({"payload": payload, "dry_run": bool(self.dryrun)})
+        try:
+            response = self.service.post(SEND_PATH, headers=[("Content-Type", "application/json")], body=body)
+            result = json.loads(response.body.read() or b"{}")
+        except HTTPError as exc:
+            raw = getattr(exc, "body", b"") or b""
             try:
-                return (json_string)
-            except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse JSON: {json_string}")
-            logger.error(f"JSON decode error: {str(e)}")
+                result = json.loads(raw)
+            except (TypeError, ValueError):
+                result = {"status": "error", "message": f"HTTP {exc.status}: {exc.reason}"}
 
-def post_to_ds(dashboard_payload):
-    ds_host, ds_mgmt_port, ds_token = read_splunk_config_ds_url()
-    
-    
-    url = f'https://{ds_host}:{ds_mgmt_port}/servicesNS/-/input_conf_generator_ds/receive_payload'
-    headers = {'Content-Type': 'application/json',
-               'Authorization': f'Splunk {ds_token}'
-               }
-    
-    
-    # logger.debug(f"header - with auth token: {headers}")
-    params = {'output_mode': 'json'}
-    try:
-        logger.debug(f"Posting to URL: {url}")
-        response = requests.post(
-            url,
-            headers=headers,
-            json={'payload': json.dumps(dashboard_payload)},
-            params=params,
-            verify=False
-        )
-        response.raise_for_status()
-        logger.debug(f"Response from DS: {response.json()}")
+        row = {"_time": time.time()}
+        flatten("", result, row)
+        yield row
 
-        return True
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error sending payload to DS: {str(e)}", exc_info=True)
-        return False
-    
-def stream(results, keywords, argvals):
-    logger.info("Stream function called")
-    logger.debug(f"Input results: {results}")
-    try:
-        # Parse the input arguments
-        dashboard_payload = parse_args(results, keywords, argvals)
-        logger.debug(f"Parsed dashboard_payload: {dashboard_payload}")
 
-        # Attempt to post the payload
-        post_success = post_to_ds(dashboard_payload)
-        logger.debug(f"Payload post status: {post_success}")
-
-        # Prepare result dictionary
-        result = {
-            "status" : "success",
-            "_raw": f"Payload sent successfully",
-            "return_payload": "return payload"
-
-        }
-
-        # Output the result to Splunk
-        splunk.Intersplunk.outputResults([result])
-
-        # Yield the result for further streaming
-        yield result
-
-    except Exception as e:
-        logger.error(f"Error in stream function: {str(e)}", exc_info=True)
-
-        # Generate error result
-        error_result = {
-            "error": str(e),
-            "status": "error",
-            "_raw": f"Error occurred: {str(e)}"
-        }
-
-        # Output the error result to Splunk
-        splunk.Intersplunk.outputResults([error_result])
-
-        # Yield the error result to handle in streaming context
-        yield error_result
-
-if __name__ == '__main__':
-    try:
-        logger.info("Script started")
-        logger.debug(f"sys.argv: {sys.argv}")
-        results = [ {'Script Status': "Started execution", 'Script Status': "Preparing payload"}]
-            
-
-        splunk.Intersplunk.outputResults(results)
-        logger.debug(f"Results outputted : {results}")
-        
-        if len(sys.argv) > 1 and (sys.argv[1] == '--getinfo' or sys.argv[1] == '__GETINFO__'):
-            logger.info(json.dumps(getinfo()))
-            print(json.dumps(getinfo()))
-            logger.info("Getinfo executed successfully")
-        else:
-            logger.info("Executing command in streaming mode")
-
-            results, dummyresults, settings = splunk.Intersplunk.getOrganizedResults()
-            
-            # Retrieve keywords and options from Splunk
-            keywords, argvals = splunk.Intersplunk.getKeywordsAndOptions()
-
-            # Stream and collect results
-            streaming_results = list(stream(results, keywords, argvals))
-            logger.debug(f"Streaming_results: {streaming_results}")
-
-            # Final result to send back to Splunk
-            final_results = [{"output": "Sent payload to DS", "message": "Execution complete"}]
-
-            # Output all results to Splunk
-            splunk.Intersplunk.outputResults(final_results)
-            
-    except Exception as e:
-        error_message = f"Error in script execution: {str(e)}"
-        splunk.Intersplunk.generateErrorResults(str(e))
-        logger.error(error_message, exc_info=True)
-        sys.exit(1)
+dispatch(SendPayloadCommand, sys.argv, sys.stdin, sys.stdout, __name__)

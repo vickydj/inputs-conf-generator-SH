@@ -1,157 +1,132 @@
 import * as Setup from "./store_secret.js";
 
-define(["react", "splunkjs/splunk"], function(react, splunk_js_sdk){
+define(["react", "splunkjs/splunk"], function(react, splunk_js_sdk) {
   const e = react.createElement;
-
-const Logger = {
-    info: (message, data) => {
-      console.log(`[INFO] ${message}`, data || '');
-    },
-    error: (message, error) => {
-      console.error(`[ERROR] ${message}`, error);
-    },
-    warn: (message, data) => {
-      console.warn(`[WARN] ${message}`, data || '');
-    }
-  };
 
   class SetupPage extends react.Component {
     constructor(props) {
       super(props);
-      Logger.info('SetupPage initialized');
-
       this.state = {
-        ds_host: '',
-        ds_mgmt_port: '',
-        ds_token: '',
-        serverclass_reload_cron: ''
+        ds_host: "",
+        ds_mgmt_port: "8089",
+        ds_token: "",
+        ssl_verify: true,
+        ca_cert_path: "",
+        serverclass_reload_cron: "",
+        token_stored: false,
+        legacy_cleartext_token: false,
+        loading: true,
+        saving: false,
+        errors: [],
+        saved: false
       };
-
       this.handleChange = this.handleChange.bind(this);
       this.handleSubmit = this.handleSubmit.bind(this);
     }
 
-    handleChange(event) {
-      const { name, value } = event.target;
-      Logger.info(`Form field changed: ${name}`, { value });
-
+    async componentDidMount() {
       try {
-        this.setState({ ...this.state, [name]: value });
+        const current = await Setup.load(splunk_js_sdk);
+        this.setState(Object.assign({ loading: false }, current));
       } catch (error) {
-        Logger.error('Error updating state:', error);
+        console.error("Could not load current configuration", error);
+        this.setState({ loading: false });
       }
+    }
+
+    handleChange(event) {
+      const { name, type, checked, value } = event.target;
+      this.setState({ [name]: type === "checkbox" ? checked : value, errors: [], saved: false });
     }
 
     async handleSubmit(event) {
       event.preventDefault();
-      Logger.info('Form submission started', { formData: this.state });
-
+      const errors = Setup.validate(this.state, this.state.token_stored);
+      if (errors.length) {
+        this.setState({ errors: errors });
+        return;
+      }
+      this.setState({ saving: true, errors: [] });
       try {
         await Setup.perform(splunk_js_sdk, this.state);
-        Logger.info('Form submission completed successfully');
-        alert ("Configuration Completed Successfully. Please wait for the app to reload.");
+        this.setState({ saving: false, saved: true, ds_token: "", token_stored: true });
+        Setup.finish();
       } catch (error) {
-        Logger.error('Form submission failed:', error);
-        alert ("Configuration Failed. Please try again.");
-
+        console.error("Setup failed", error);
+        const detail = (error && (error.data && error.data.messages && error.data.messages[0] && error.data.messages[0].text))
+          || (error && error.message) || String(error);
+        this.setState({ saving: false, errors: ["Saving the configuration failed: " + detail] });
       }
     }
 
-    componentDidMount() {
-      Logger.info('Component mounted');
-    }
-
-    componentWillUnmount() {
-      Logger.info('Component will unmount');
+    input(name, label, opts) {
+      opts = opts || {};
+      return e("div", { className: "form-group", key: name }, [
+        e("label", { htmlFor: name, className: opts.required ? "required" : "", key: "l" }, label),
+        e("input", {
+          key: "i",
+          type: opts.type || "text",
+          id: name,
+          name: name,
+          value: this.state[name],
+          onChange: this.handleChange,
+          placeholder: opts.placeholder || "",
+          required: Boolean(opts.required),
+          autoComplete: opts.type === "password" ? "new-password" : "off"
+        }),
+        opts.help ? e("div", { className: "help-text", key: "h" }, opts.help) : null
+      ]);
     }
 
     render() {
-      Logger.info('Rendering SetupPage');
-      
+      if (this.state.loading) {
+        return e("div", { className: "setup-container" }, "Loading current configuration...");
+      }
       return e("div", { className: "setup-container" }, [
-        e("header", { className: "setup-header" }, [
-            
-            e("h2", null, "Configuration Wizard"),
-            e("p", { className: "setup-description" }, 
-                "Please provide the required configuration parameters below. These settings will be used to communicate with deployment-server ."
-            ),
-            e("p", { className: "setup-author" }, 
-                "Developed by Vignesh Narendran"
-            ),
+        e("header", { className: "setup-header", key: "header" }, [
+          e("h2", { key: "t" }, "Configuration Wizard"),
+          e("p", { className: "setup-description", key: "d" },
+            "Connection details for the deployment server that runs input_conf_generator_ds."),
+          e("p", { className: "setup-author", key: "a" }, "Developed by Vignesh Narendran")
         ]),
-    
-
-        e("hr", null),
-
-        e("form", { 
-          onSubmit: this.handleSubmit, 
-          className: "setup-form",
-          onInvalid: (e) => Logger.warn('Form validation failed:', { field: e.target.name })
-        }, [
-          e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "ds_host", className: "required" }, "DS Address (IP Address or Hostname)"),
-            e("input", { 
-              type: "text", 
-              id: "ds_host",
-              name: "ds_host", 
-              value: this.state.ds_host, 
-              onChange: this.handleChange,
-              placeholder: "10.0.0.1 [OR] ds.example.com",
-              required: true,
-
-            })
-          ]),
-          e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "ds_mgmt_port", className: "required" }, "DS Management Port"),
-            e("input", { 
-              type: "text", 
-              id: "ds_mgmt_port",
-              name: "ds_mgmt_port", 
-              value: this.state.ds_mgmt_port, 
-              onChange: this.handleChange,
-              placeholder: "8089",
-              required: true,
-
-            })
-          ]),
-          e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "ds_token", className: "required" }, "DS Auth Token"),
-            e("input", { 
-              type: "text", 
-              id: "ds_token",
-              name: "ds_token", 
-              value: this.state.ds_token, 
-              onChange: this.handleChange,
-              required: true,
-
-            })
-          ]),
-          e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "serverclass_reload_cron" }, "Server Class Reload Schedule (Cron Expression OR Frequency in seconds)"),
-            e("input", { 
-              type: "text", 
-              id: "serverclass_reload_cron",
-              name: "serverclass_reload_cron", 
-              value: this.state.serverclass_reload_cron, 
-              onChange: this.handleChange,
-              placeholder: "Default if not configured : */30 * * * *",
-              required: false,
-
-            })
-          ]),
-          e("div", { className: "form-group" }, 
-            e("input", { 
-              type: "submit", 
-              value: "Submit", 
-              className: "submit-button",
-              onClick: () => Logger.info('Submit button clicked')
-            })
-          )
+        e("hr", { key: "hr" }),
+        this.state.legacy_cleartext_token ? e("div", { className: "outcome outcome-error form-group", key: "legacy" },
+          "A cleartext token from an older version was found in ds_info.conf. Saving this page moves it to " +
+          "encrypted storage and blanks it. Also revoke the old token on the DS.") : null,
+        this.state.errors.length ? e("div", { className: "outcome outcome-error form-group", key: "errors" },
+          e("ul", null, this.state.errors.map((msg, i) => e("li", { key: i }, msg)))) : null,
+        this.state.saved ? e("div", { className: "outcome outcome-ok form-group", key: "ok" },
+          "Configuration saved. Reloading the app...") : null,
+        e("form", { onSubmit: this.handleSubmit, className: "setup-form", key: "form" }, [
+          this.input("ds_host", "DS address (IP address or hostname)", { required: true, placeholder: "ds.example.com" }),
+          this.input("ds_mgmt_port", "DS management port", { required: true, placeholder: "8089" }),
+          this.input("ds_token", "DS auth token", {
+            type: "password",
+            required: !this.state.token_stored,
+            placeholder: this.state.token_stored ? "A token is stored. Leave blank to keep it." : "",
+            help: "Token of a DS user that has only the input_conf_generator_sender role. It is stored encrypted in storage/passwords."
+          }),
+          e("div", { className: "form-group", key: "ssl_verify" },
+            e("label", { className: "consent" }, [
+              e("input", { key: "c", type: "checkbox", name: "ssl_verify", checked: this.state.ssl_verify, onChange: this.handleChange }),
+              " Verify the DS TLS certificate (recommended; only untick for lab environments)"
+            ])),
+          this.input("ca_cert_path", "CA bundle path (optional)", {
+            placeholder: "$SPLUNK_HOME/etc/auth/my_ca.pem",
+            help: "PEM file of the CA that signed the DS certificate. Leave blank to use the system CA store."
+          }),
+          this.input("serverclass_reload_cron", "Server class reload schedule (cron expression or seconds)", {
+            placeholder: "*/30 * * * * (default)"
+          }),
+          e("div", { className: "form-group", key: "submit" },
+            e("input", {
+              type: "submit", className: "submit-button", disabled: this.state.saving,
+              value: this.state.saving ? "Saving..." : "Save"
+            }))
         ])
       ]);
     }
   }
 
-  Logger.info('Initializing SetupPage component');
   return e(SetupPage);
 });

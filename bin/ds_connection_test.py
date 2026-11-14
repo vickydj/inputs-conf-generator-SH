@@ -1,91 +1,42 @@
-import sys
+"""Scripted input: checks that the configured DS is reachable and accepts the token.
+
+Writes one key=value event per run (sourcetype input_conf_generator:status), so
+you can alert on status!="ok". Needs passAuth = splunk-system-user in inputs.conf.
+"""
+
 import os
-import requests
-import configparser
-import socket
-import logging
-from logging import handlers
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import input_conf_generator_common as common  # noqa: E402
+
+logger = common.setup_logger("input_conf_generator_ping_test")
 
 
-def setup_logger(level):
-    logger = logging.getLogger('input_conf_generator_ping_test')
-    logger.setLevel(level)
-    handler = logging.handlers.RotatingFileHandler(os.environ['SPLUNK_HOME']+'/var/log/splunk/input_conf_generator_ping_test.log', maxBytes=1000000, backupCount=5)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
+def main():
+    try:
+        service = common.service_from_token(common.read_session_key_from_stdin())
+        settings = common.get_settings(service)
+        token = common.get_ds_token(service)
+    except common.ConfigurationError as exc:
+        logger.error("%s", exc)
+        print(common.kv_event(check="ds_connection", status="not_configured", message=exc))
+        return 1
 
-logger = setup_logger(logging.DEBUG)
+    try:
+        status, _ = common.ds_request(settings, token, "GET", common.DS_INFO_PATH, logger=logger)
+    except Exception as exc:
+        logger.exception("DS connection failed")
+        print(common.kv_event(check="ds_connection", status="unreachable", ds_host=settings["ds_host"], message=exc))
+        return 1
 
-def if_conf_exists(config_file):
-    
-    if os.path.exists(config_file):
-        logger.debug(f"Config file exists: {config_file}")
-        return True
-    else:
-        logger.error(f"Config file does not exist: {config_file}")
-        return False
+    ok = status == 200
+    (logger.info if ok else logger.error)("DS connection check http_status=%s", status)
+    print(common.kv_event(check="ds_connection", status="ok" if ok else "error",
+                          ds_host=settings["ds_host"], http_status=status))
+    return 0 if ok else 1
 
-def read_splunk_config_ds_url(config_file):
-    config = configparser.ConfigParser()
-    
-    config.read(config_file)
-    logger.debug(f"Reading config file: {config_file}")
-    ds_host = config.get('properties', 'ds_host')
-    ds_mgmt_port = config.getint('properties', 'ds_mgmt_port')
-    ds_token = config.get('properties', 'ds_token')
-    logger.debug(f"ds_host: {ds_host}, ds_mgmt_port: {ds_mgmt_port}")
-    
-    if ds_host and ds_mgmt_port and ds_token:
-        return ds_host, ds_mgmt_port, ds_token
-    else:
-        logger.error("One or more values are missing")
-        return None, None, None
-
-
-def test_ds_connection(config_file):
-    ds_host, ds_mgmt_port, ds_token = read_splunk_config_ds_url(config_file)
-
-    if ds_host and ds_mgmt_port and ds_token:
-        
-        
-        ds_url = f"https://{ds_host}:{ds_mgmt_port}/services/apps/local"
-        headers = {
-            'Authorization': f'Bearer {ds_token}'
-        }
-        try:
-            response = requests.get(ds_url, headers=headers, verify=False)
-            logger.debug(f"response: {response}")
-            
-            if response.status_code == 200:
-                logger.info("Success: The request was successfully completed.")
-                return True
-            elif response.status_code == 404:
-                logger.warning("Warning: The requested resource could not be found (404).")
-                return False
-            elif response.status_code == 500:
-                logger.error("Error: The server encountered an internal error (500).")
-                return False
-            else:
-                logger.error(f"Error: Unexpected status code: {response.status_code}")
-                return False
-                
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Error making request: {str(e)}")
-            return False
-    else:
-        logger.error("Missing configuration values")
-        return False
-        
 
 if __name__ == "__main__":
-    
-    config_file = os.path.join(os.environ['SPLUNK_HOME'], 'etc', 'apps', 'input_conf_generator_sh', 'local', 'ds_info.conf')
-    if if_conf_exists(config_file):
-        if test_ds_connection(config_file):
-            logger.debug("Splunk DS connection is successful")
-        else:
-            logger.error("Splunk DS connection Failed")
-    else:
-        logger.error("Splunk DS connection Failed")
+    sys.exit(main())

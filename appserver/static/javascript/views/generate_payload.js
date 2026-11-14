@@ -1,381 +1,220 @@
 define([
-  "react", 
-  "splunkjs/splunk",
-  'underscore',
-  'jquery',
-  'splunkjs/mvc',
-  'splunkjs/mvc/utils',
-  'splunkjs/mvc/tokenutils',
-  'splunkjs/mvc/simplexml/ready!'
-], function(
-  react, 
-  splunk_js_sdk,
-  _,
-  $,
-  SplunkMVC,  
-  utils, 
-  TokenUtils
-) {
+  "react",
+  "splunkjs/mvc",
+  "splunkjs/mvc/simplexml/ready!"
+], function(react, mvc) {
+  "use strict";
   const e = react.createElement;
+  const SEND_PATH = "/services/input_conf_generator/send";
 
-  const Logger = {
-    info: (message, data) => {
-      console.log(`[INFO] ${message}`, data || '');
-    },
-    error: (message, error) => {
-      console.error(`[ERROR] ${message}`, error);
-    },
-    warn: (message, data) => {
-      console.warn(`[WARN] ${message}`, data || '');
-    }
+  // Mirrors the DS-side rules (input_conf_generator_lib.py). The DS stays authoritative.
+  const PATTERNS = {
+    name: "[A-Za-z0-9][A-Za-z0-9_\\-]{0,79}",
+    index: "[a-z0-9][a-z0-9_\\-]{0,79}",
+    sourcetype: "[A-Za-z0-9_][A-Za-z0-9_.:\\-]{0,99}",
+    version: "\\d{1,4}(\\.\\d{1,4}){0,3}"
   };
-  const TokenManager = {
-    initialize: function() {
-      try {
-        // Get the default token model
-        const defaultTokens = SplunkMVC.Components.get('default');
-        
-        if (!defaultTokens) {
-          throw new Error('Could not get default token model');
-        }
 
-        Logger.info("Token initialization successful");
-        
-        // Read and log field1 value
-        const field1Value = defaultTokens.get("field1");
-        Logger.info("Field1 token value:", field1Value); 
-        
-        // Set jspayload value
-        defaultTokens.set("jspayload", "pong");
-        Logger.info("jspayload token value:", defaultTokens.get("jspayload")); 
-
-        return defaultTokens;
-      } catch (error) {
-        Logger.error("Error initializing tokens:", error);
-        return null;
-      }
-    }
+  const EMPTY_FORM = {
+    message_payload: "",
+    precedence: "low",
+    my_index: "",
+    my_sourcetype: "",
+    my_source: "",
+    my_host: "",
+    app_name: "",
+    environment: "",
+    version: "1.0.0"
   };
-  
+
+  function splitList(value) {
+    return value.split(/[,\n]/).map(item => item.trim()).filter(Boolean);
+  }
+
   class PayloadConfigPage extends react.Component {
     constructor(props) {
       super(props);
-      Logger.info('PayloadConfigPage initialized');
-    
       this.state = {
-        message_payload: '',
-        precedence: 'low',
-        my_index: '',
-        my_sourcetype: '',
-        my_source: '',
-        my_host: '',
-        app_name: '',
-        environment: '',
-        version: '1.0.0',
-        isSubmitting: false,
-        generatedPayload: null,
-        copySuccess: false
+        form: Object.assign({}, EMPTY_FORM),
+        busy: false,
+        preview: null,   // last dry-run response (only valid for the current form)
+        result: null,    // last real send response
+        consent: false
       };
-    
+      this.service = mvc.createService();
       this.handleChange = this.handleChange.bind(this);
-      this.handleSubmit = this.handleSubmit.bind(this);
-      this.copyToClipboard = this.copyToClipboard.bind(this);
-      this.tokens = null;
+      this.handlePreview = this.handlePreview.bind(this);
+      this.handleSend = this.handleSend.bind(this);
     }
 
-    shapeString(input) {
-      // Convert JSON object to string
-      let jsonString = JSON.stringify(input, null, 2);
-      
-      // Replace double quotes with single quotes
-      jsonString = jsonString.replace(/"/g, "'");
-      
-      // Remove extra spaces around colons
-      jsonString = jsonString.replace(/:\s+/g, ': ');
-      
-      return jsonString;
-    }
-
-    
-    componentDidMount() {
-      // Initialize tokens when component mounts
-      this.tokens = TokenManager.initialize();
-    
-      if (this.tokens) {
-        // Initialize component with token value if it exists
-        const field1Value = this.tokens.get("field1");
-        if (field1Value) {
-          // this.setState({ message_payload: field1Value });
-          Logger.info("mount : field1 " + field1Value);
-        }
-    
-        // Add token change listener
-        this.tokens.on("change:field1", this.handleTokenChange.bind(this));
-      }
-    }
-    
-    handleTokenChange(model, value, options) {
-      Logger.info("Token changed field1:", value);
-      // this.setState({ message_payload: value });
-    }
-    
-    componentWillUnmount() {
-      // Clean up token listeners
-      if (this.tokens) {
-        this.tokens.off("unmount change:field1", this.handleTokenChange);
-      }
-    }
-   
-    handleChange(event) {
-      const { name, value } = event.target;
-      Logger.info(`Form field changed: ${name}`, { value });
-    
-      try {
-        this.setState(
-          prevState => ({ ...prevState, [name]: value }),
-          () => {
-            // Update tokens when relevant fields change
-            if (name === 'message_payload' && this.tokens) {
-              // this.tokens.set("jspayload", value);
-            }
-    
-            // Update field1 token with the generated payload
-            if (name === 'precedence' && this.tokens) {
-              // const payload = this.generatePayload();
-
-              // this.tokens.set("field1", JSON.stringify(payload, null, 2));
-              this.tokens.set("field1", value)
-              Logger.info("Token field1 updated:", this.tokens.get("field1"));
-              
-            }
-          }
-        );
-      } catch (error) {
-        Logger.error('Error updating state:', error);
-      }
-    }
-
-
-
-    generatePayload() {
-      const sourceArray = this.state.my_source.split(',').map(item => item.trim());
-      const hostArray = this.state.my_host.split(',').map(item => item.trim());
-    
+    buildPayload() {
+      const f = this.state.form;
       return {
-        message: this.state.message_payload,
-        precedence: this.state.precedence,
-        my_index: this.state.my_index,
-        my_sourcetype: this.state.my_sourcetype,
-        my_source: sourceArray,
-        my_host: hostArray,
+        message: f.message_payload.trim(),
+        precedence: f.precedence,
+        my_index: f.my_index.trim(),
+        my_sourcetype: f.my_sourcetype.trim(),
+        my_source: splitList(f.my_source),
+        my_host: splitList(f.my_host),
         additional_metadata: {
-          app_name: this.state.app_name,
-          environment: this.state.environment,
-          version: this.state.version,
+          app_name: f.app_name.trim(),
+          environment: f.environment.trim(),
+          version: f.version.trim() || "1.0.0",
           timestamp: new Date().toISOString()
         }
       };
     }
 
-    async copyToClipboard() {
-      try {
-        await navigator.clipboard.writeText(
-          JSON.stringify(this.state.generatedPayload, null, 2)
-        );
-        this.setState({ copySuccess: true });
-        setTimeout(() => this.setState({ copySuccess: false }), 2000);
-      } catch (err) {
-        Logger.error('Failed to copy:', err);
-        alert('Failed to copy payload to clipboard');
-      }
+    // Any edit invalidates the preview and the consent given for it.
+    handleChange(event) {
+      const { name, value } = event.target;
+      this.setState(prev => ({
+        form: Object.assign({}, prev.form, { [name]: value }),
+        preview: null,
+        result: null,
+        consent: false
+      }));
     }
 
-    
-
-    async handleSubmit(event) {
-      event.preventDefault();
-      this.setState({ isSubmitting: true });
-      this.tokens.set("jspayload", "test");
-
-      const payload = this.generatePayload();
-      this.setState({ generatedPayload: payload }, () => {
-        Logger.info('Generated payload:', payload);
-        if (this.tokens) {
-          try {
-            const payloadString = JSON.stringify(payload, null, 2);
-            const shaped_payload=this.shapeString(payloadString)
-            Logger.info('Shaped payload:', shaped_payload);
-            this.tokens.set("jspayload", shaped_payload);
-            Logger.info("Token jspayload updated:", this.tokens.get("jspayload"));
-            alert("Cheers !! Payload generated, now you can hit the agree checkbox and submit on the top of the page !!")
-          } catch (error) {
-            Logger.error("Error setting token:", error);
+    callSend(dryRun) {
+      const body = JSON.stringify({ payload: this.buildPayload(), dry_run: dryRun });
+      return new Promise(resolve => {
+        this.service.request(
+          SEND_PATH, "POST", { output_mode: "json" }, {}, body,
+          { "Content-Type": "application/json" },
+          (err, response) => {
+            if (err) {
+              const data = (err.data && typeof err.data === "object") ? err.data
+                : { status: "error", message: "HTTP " + (err.status || "?") + " calling " + SEND_PATH };
+              resolve(data);
+            } else {
+              resolve(response.data);
+            }
           }
-        }
+        );
       });
-
-      this.setState({ isSubmitting: false });
     }
 
+    async handlePreview(event) {
+      event.preventDefault();
+      this.setState({ busy: true, preview: null, result: null, consent: false });
+      const preview = await this.callSend(true);
+      this.setState({ busy: false, preview: preview });
+    }
+
+    async handleSend() {
+      if (!this.canSend()) {
+        return;
+      }
+      this.setState({ busy: true });
+      const result = await this.callSend(false);
+      this.setState({ busy: false, result: result, consent: false });
+    }
+
+    canSend() {
+      const p = this.state.preview;
+      return !this.state.busy && this.state.consent && p && p.status === "success" && !this.state.result;
+    }
+
+    field(name, label, opts) {
+      opts = opts || {};
+      return e("div", { className: "form-group", key: name }, [
+        e("label", { htmlFor: name, className: opts.required === false ? "" : "required", key: "l" }, label),
+        e(opts.multiline ? "textarea" : "input", {
+          key: "i",
+          type: "text",
+          id: name,
+          name: name,
+          value: this.state.form[name],
+          onChange: this.handleChange,
+          placeholder: opts.placeholder || "",
+          pattern: opts.pattern,
+          title: opts.title,
+          rows: opts.multiline ? 3 : undefined,
+          required: opts.required !== false
+        })
+      ]);
+    }
+
+    renderOutcome(data, heading) {
+      if (!data) {
+        return null;
+      }
+      const ds = (data.ds_response && data.ds_response.result) || {};
+      const errors = data.errors || (data.ds_response && data.ds_response.errors) || [];
+      const ok = data.status === "success";
+      const list = (label, items) => (items && items.length)
+        ? e("li", { key: label }, label + ": " + items.join(", ")) : null;
+      return e("div", { className: "form-group outcome " + (ok ? "outcome-ok" : "outcome-error"), key: heading }, [
+        e("h3", { key: "h" }, heading + ": " + (data.message || data.status)),
+        errors.length ? e("ul", { key: "e" }, errors.map((msg, i) => e("li", { key: i }, msg))) : null,
+        ok ? e("ul", { key: "r" }, [
+          e("li", { key: "app" }, "Deployment app: " + ds.app + (ds.new_app ? " (new)" : "")),
+          e("li", { key: "sc" }, "Server class: " + ds.serverclass + " (" + ds.serverclass_status + ")"),
+          list("Inputs to add", ds.inputs_added),
+          list("Inputs already present", ds.inputs_skipped),
+          list("Hosts to add", ds.hosts_added),
+          list("Hosts already present", ds.hosts_skipped)
+        ]) : null
+      ]);
+    }
 
     render() {
+      const previewOk = this.state.preview && this.state.preview.status === "success";
       return e("div", { className: "setup-container" }, [
-        e("header", { className: "setup-header" }, [
-          e("h2", null, "Self service - add monitor form"),
-          e("h3", null, "Please enter the necessary configuration items"),
+        e("header", { className: "setup-header", key: "header" }, [
+          e("h2", { key: "t" }, "Self service - add monitor form"),
+          e("p", { key: "d" }, "Fill in the form, preview the change (nothing is written), then confirm and send it to the deployment server.")
         ]),
-    
-        e("hr", null),
-    
-        e("form", { 
-          onSubmit: this.handleSubmit, 
-          className: "setup-form"
-        }, [
-          
-          // Message Payload
-          e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "message_payload", className: "required" }, "Message"),
-
-
-            e("input", { 
-              type: "text", 
-              id: "message_payload",
-              name: "message_payload", 
-              value: this.state.message_payload, 
-              onChange: this.handleChange,
-              placeholder: "RFC123456 / JIRA1234 - Create monitor on apache logs",
-              required: true
-            })
-          ]),
-          // Precedence
-          e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "precedence", className: "required"  }, "Precedence - Don't change unless you are overriding the lower precedence app"),
+        e("hr", { key: "hr" }),
+        e("form", { onSubmit: this.handlePreview, className: "setup-form", key: "form" }, [
+          this.field("message_payload", "Message (change reference and description)", {
+            placeholder: "RFC123456 / JIRA1234 - Create monitor on apache logs"
+          }),
+          e("div", { className: "form-group", key: "precedence" }, [
+            e("label", { htmlFor: "precedence", className: "required", key: "l" },
+              "Precedence - don't change unless you are overriding a lower-precedence app"),
             e("select", {
-              id: "precedence",
-              name: "precedence",
-              value: this.state.precedence,
-              onChange: this.handleChange,
-              required: true
+              key: "s", id: "precedence", name: "precedence",
+              value: this.state.form.precedence, onChange: this.handleChange, required: true
             }, [
-              e("option", { value: "low" }, "Low"),
-              e("option", { value: "normal" }, "Normal"),
-              e("option", { value: "higher" }, "Higher")
+              e("option", { value: "low", key: "low" }, "Low"),
+              e("option", { value: "normal", key: "normal" }, "Normal"),
+              e("option", { value: "high", key: "high" }, "High")
             ])
           ]),
-          // Index
-          e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "my_index", className: "required"  }, "Index"),
-            e("input", { 
-              type: "text", 
-              id: "my_index",
-              name: "my_index", 
-              value: this.state.my_index, 
-              onChange: this.handleChange,
-              required: true
-            })
-          ]),
-          // Sourcetype
-          e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "my_sourcetype", className: "required"  }, "Sourcetype"),
-            e("input", { 
-              type: "text", 
-              id: "my_sourcetype",
-              name: "my_sourcetype", 
-              value: this.state.my_sourcetype, 
-              onChange: this.handleChange,
-              required: true
-            })
-          ]),
-          // Source (comma-separated)
-          e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "my_source", className: "required"  }, "Source Paths (comma-separated)"),
-            e("input", { 
-              type: "text", 
-              id: "my_source",
-              name: "my_source", 
-              value: this.state.my_source, 
-              onChange: this.handleChange,
-              placeholder: "/path/to/file1.log, /path/to/file2.log",
-              required: true
-            })
-          ]),
-          // Host (comma-separated)
-          e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "my_host", className: "required"  }, "Hosts (comma-separated)"),
-            e("input", { 
-              type: "text", 
-              id: "my_host",
-              name: "my_host", 
-              value: this.state.my_host, 
-              onChange: this.handleChange,
-              placeholder: "hostname1, hostname2",
-              required: true
-            })
-          ]),
-          // App Name
-          e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "app_name", className: "required"  }, "App Name"),
-            e("input", { 
-              type: "text", 
-              id: "app_name",
-              name: "app_name", 
-              value: this.state.app_name, 
-              onChange: this.handleChange,
-              placeholder: "my_apache_log",
-              required: true
-            })
-          ]),
-          // Environment
-          e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "environment", className: "required"  }, "Environment"),
-            e("input", { 
-              type: "text", 
-              id: "environment",
-              name: "environment", 
-              value: this.state.environment, 
-              onChange: this.handleChange,
-              placeholder: "test OR qa OR dev OR prod OR anything you like ;)",
-              required: true
-            })
-          ]),
-          // Version
-          e("div", { className: "form-group" }, [
-            e("label", { htmlFor: "version" }, "Version"),
-            e("input", { 
-              type: "text", 
-              id: "version",
-              name: "version", 
-              value: this.state.version, 
-              onChange: this.handleChange,
-              placeholder: "1.0.0 - feature not yet implemented",
-              required: false
-            })
-          ]),
-          
-
-          // Submit Button
-          e("div", { className: "form-group" }, 
-            e("input", { 
-              type: "submit", 
-              value: this.state.isSubmitting ? "Generating..." : "Generate Payload", 
-              className: "submit-button",
-              disabled: this.state.isSubmitting
-            })
-          )
+          this.field("my_index", "Index", { pattern: PATTERNS.index, title: "Lowercase letters, digits, _ and -" }),
+          this.field("my_sourcetype", "Sourcetype", { pattern: PATTERNS.sourcetype, title: "Letters, digits, _ . : -" }),
+          this.field("my_source", "Source paths (absolute, comma or newline separated)", {
+            multiline: true, placeholder: "/var/log/httpd/access.log, /var/log/httpd/error.log"
+          }),
+          this.field("my_host", "Hosts (comma or newline separated, wildcards like web* allowed)", {
+            multiline: true, placeholder: "web01, web02"
+          }),
+          this.field("app_name", "App name", { pattern: PATTERNS.name, placeholder: "apache", title: "Letters, digits, _ and -" }),
+          this.field("environment", "Environment", { pattern: PATTERNS.name, placeholder: "prod", title: "Letters, digits, _ and -" }),
+          this.field("version", "Version", { pattern: PATTERNS.version, required: false, placeholder: "1.0.0" }),
+          e("div", { className: "form-group", key: "preview" },
+            e("input", {
+              type: "submit", className: "submit-button", disabled: this.state.busy,
+              value: this.state.busy && !previewOk ? "Checking..." : "Preview (dry run)"
+            }))
         ]),
-
-        // Payload Display Section
-        this.state.generatedPayload && e("div", {  className: "form-group" }, [
-          e("h3", null, "Generated Payload"),
+        this.renderOutcome(this.state.preview, "Preview"),
+        previewOk && !this.state.result ? e("div", { className: "form-group", key: "consent" }, [
+          e("label", { key: "c", className: "consent" }, [
+            e("input", {
+              key: "cb", type: "checkbox", checked: this.state.consent,
+              onChange: ev => this.setState({ consent: ev.target.checked })
+            }),
+            " I agree and take responsibility for having Splunk monitor the files above on the hosts above."
+          ]),
           e("button", {
-            onClick: this.copyToClipboard,
-            className: "copy-button"
-            
-          }, this.state.copySuccess ? "Copied!" : "Copy to Clipboard"),
-          e("pre", { 
-            
-          }, JSON.stringify(this.state.generatedPayload, null, 2))
-        ])
+            key: "send", type: "button", className: "submit-button",
+            disabled: !this.canSend(), onClick: this.handleSend
+          }, this.state.busy ? "Sending..." : "Send to deployment server")
+        ]) : null,
+        this.renderOutcome(this.state.result, "Result")
       ]);
     }
   }

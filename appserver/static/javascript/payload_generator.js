@@ -11,31 +11,11 @@ require.config({
     scriptType: "module",
 });
 
-require([
-    "react", 
-    "ReactDOM",
-    "myApp",
-], function(react, ReactDOM, myApp) {
-    // Create a container div for the form and payload display
-    const container = document.getElementById('main_container');
+require(["react", "ReactDOM", "myApp"], function(react, ReactDOM, myApp) {
+    var container = document.getElementById("main_container");
     if (!container) {
-        console.error('Main container not found');
+        console.error("main_container not found");
         return;
     }
-
-    // Create a div for payload display if it doesn't exist
-    if (!document.getElementById('payload_display')) {
-        const payloadDiv = document.createElement('div');
-        payloadDiv.id = 'payload_display';
-        container.appendChild(payloadDiv);
-    }
-
-    if (!document.getElementById('ds_conn_test')) {
-        const ds_conn_test_Div = document.createElement('div');
-        ds_conn_test_Div.id = 'ds_conn_test';
-        container.appendChild(ds_conn_test_Div);
-        
-    }
-
     ReactDOM.render(myApp, container);
 });
