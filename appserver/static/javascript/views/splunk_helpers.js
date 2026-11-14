@@ -192,6 +192,28 @@ function update_stanza_properties(
   return promisify(configuration_stanza_accessor.update)(new_stanza_properties);
 };
 
+// Returns the stanza's properties, or null if the file or stanza does not exist.
+async function read_configuration_stanza(
+  splunk_js_sdk_service,
+  configuration_file_name,
+  stanza_name,
+) {
+  var configurations = splunk_js_sdk_service.configurations({});
+  configurations = await promisify(configurations.fetch)();
+  if (!does_configuration_file_exist(configurations, configuration_file_name)) {
+      return null;
+  }
+  var file_accessor = get_configuration_file(configurations, configuration_file_name);
+  file_accessor = await promisify(file_accessor.fetch)();
+  if (!does_stanza_exist(file_accessor, stanza_name)) {
+      return null;
+  }
+  var stanza_accessor = get_configuration_file_stanza(file_accessor, stanza_name);
+  stanza_accessor = await promisify(stanza_accessor.fetch)();
+  return stanza_accessor.properties();
+};
+
 export {
   update_configuration_file,
+  read_configuration_stanza,
 }

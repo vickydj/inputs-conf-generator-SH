@@ -1,49 +1,134 @@
-# input_conf_generator_sh 
+# input_conf_generator_sh
 
-This app only works if the peer - ds app is installed <app name>, and set up page is configured with details of the DS Without either of them, the functionality is broken.
+Search-head half of the Input Conf Generator. It needs
+[`input_conf_generator_ds`](https://github.com/vickydj/inputs-conf-generator-DS)
+on the deployment server, and the setup page must be completed.
 
-## Current functionality : 
+## Requirements
 
+* Splunk Enterprise **10.2+** (or Splunk Cloud) with **Python 3.13 or 3.14**. Scripts declare
+  `python.required = 3.13, 3.14`. Python 2 and older Python 3 runtimes aren't supported.
+* Vendored [Splunk SDK for Python](https://github.com/splunk/splunk-sdk-python) **3.0.1** in `bin/`
+  (`splunklib/` plus its `splunk_sdk-3.0.1.dist-info/`, which the SDK needs at runtime).
 
-### Self-service form 
+## How it works
 
-- Admins will need to generate an auth token from DS and configure the setup page with required details.
-  
-- Dashboard builds a json payload from user inputs. 
+```
+Self-service form ──POST──▶ /services/input_conf_generator/send   (this app, SH)
+   (dashboard)              │  needs capability input_conf_generator_send
+| sendpayload  ─────────────┘  reads DS token from storage/passwords (system auth)
+                               │
+                               └──HTTPS (TLS verified)──▶ /services/receive_payload (DS app)
+                                                          needs capability input_conf_generator_write
+```
 
-- Dashboard calls custom command which invokes python to send payload to DS.
+1. **Preview.** The form sends a `dry_run`. The DS validates the request and replies with the
+   deployment app, the server class, and which inputs and hosts would be added or are already present. Nothing is written.
+2. **Consent and send.** The send button only appears after a successful preview, and only works once
+   the consent box is ticked. Editing any field resets the preview and the consent.
+3. **Reload.** A scripted input calls the DS server-class reload every 30 minutes (configurable).
+   A second scripted input checks the DS connection every 5 minutes. Both write `status=…` events with sourcetype
+   `input_conf_generator:status`.
 
-- Store the payload in a text file, for reference.
+Logs: `$SPLUNK_HOME/var/log/splunk/input_conf_generator_*.log` (sourcetype `input_conf_generator`).
 
-### Setup page
+## Install and configure
 
-- This is admin configurable from JS setup page.
+1. Install `input_conf_generator_ds` on the deployment server. Create a DS service account that has only
+   the `input_conf_generator_sender` role, and an auth token for it.
+2. Install this app on the search head and restart.
+3. As admin, open the app. Splunk redirects to the setup page (`setup_view`). Enter:
+   * DS host and management port
+   * the DS auth token, which is stored encrypted in `storage/passwords` and never written to a `.conf` file
+   * TLS verification (on by default) and an optional CA bundle path
+   * the server-class reload schedule
+4. Give self-service users the **`input_conf_generator_user`** role. Users without the
+   `input_conf_generator_send` capability can't call the endpoint or `| sendpayload`.
 
-- ds_info.conf is created with host, port and token.
+## Search command
 
-- Token is stored as clear text in ds_info.conf
+```
+| sendpayload dryrun=true payload="<JSON or base64 JSON>"
+```
 
-- Encrypted in passwords.conf with password storage endpoint. (unread as of now)
+This calls the same endpoint as the dashboard, so the same capability check applies.
 
+## Upgrading from 1.0.x
 
-## Feature enhancements:
+* **Upgrade both apps together.** The payload format and the DS authentication changed.
+* **Revoke the old DS tokens.** Earlier commits contained `local/ds_info.conf`,
+  `default/ds_info.backup` and `local/passwords.conf` with real tokens. Removing them from the
+  current tree doesn't remove them from git history. Revoke the tokens on the DS and purge the history,
+  e.g. `git filter-repo --path local --path default/ds_info.backup --path metadata/local.meta --invert-paths`.
+* Re-run the setup page. It moves the token into `storage/passwords`, blanks the old cleartext
+  `ds_token` in `ds_info.conf`, and removes the old `ds_auth_token` secret.
 
-• Get list of UF from DS, read token from ds_info.conf
+## Development
 
-• Add username to payload. And add in inputs.conf.
+Use Python 3.13+.
 
-• Read password from endpoint and remove from ds_info.conf
+```bash
+python3 -m unittest discover -s tests   # no Splunk needed; runs an HTTPS end-to-end test against
+                                        # the DS handler if ../inputs-conf-generator-DS exists
+```
 
-• Populate setup page if configured.
+To update the SDK, reinstall it into `bin/` with its metadata, then delete the optional `ai` package
+(it needs extra dependencies, and the core SDK doesn't import it):
 
-• replicate the dashboard with a js script page to generate payload.
+```bash
+rm -rf bin/splunklib bin/splunk_sdk-*.dist-info
+python3.13 -m pip install --no-deps --no-compile --target bin splunk-sdk==<version>
+rm -rf bin/splunklib/ai
+```
 
-• Add validations to setup page.
+Leave `tests/`, `.git` and `local/` out of the package. Check it with
+[Splunk AppInspect](https://dev.splunk.com/enterprise/docs/developapps/testvalidate/appinspect/):
+`splunk-appinspect inspect input_conf_generator_sh.tgz --mode precert`.
 
-• Add validations to payload generation page.
+## Pre-merge validation
 
+Every pull request runs `.github/workflows/validate.yml` (**Validate Splunk app**). It must pass before a merge:
 
-   
+| Check | Fails when |
+|---|---|
+| Tests | any unit or end-to-end test fails |
+| Hygiene | `local/`, `metadata/local.meta`, `*.backup`, bytecode or build output is committed |
+| Secrets | a JWT/auth token, `$7$` secret, private key or AWS key is committed, or a cleartext password, token or secret appears in a `.conf` file |
+| Security | a REST endpoint has `requireAuthentication = false`, `web.conf` exposes an endpoint, or Python disables TLS verification without a `# ci: allow-insecure-tls: <reason>` comment |
+| `.conf` sanity | there are duplicate stanzas or keys, or whitespace after a line continuation |
+| JavaScript | a syntax error (`node --check`) |
+| AppInspect | Splunk AppInspect 4.4.0 (precert) reports any failure or error. The report is uploaded as a build artifact |
 
+**Make it required (one-time, by a repo admin):** GitHub → *Settings* → *Branches* (or *Rules → Rulesets*) →
+add a rule for `master` → enable *Require a pull request before merging* and *Require status checks to pass* →
+select **Validate Splunk app**. Optionally also enable *Require branches to be up to date* and *Do not allow bypassing*.
 
+**Run it locally** (Python 3.13+; install `pip install splunk-appinspect` to include AppInspect):
 
+```bash
+python3 -m unittest discover -s tests
+python3 ci/validate_app.py              # add --require-appinspect to match CI exactly
+git config core.hooksPath ci/hooks      # optional: run the checks automatically before every git push
+```
+
+Copies of `ci/validate_app.py` are kept identical in both repos (SH and DS). Change both together.
+
+## Changelog
+
+### 1.1.0
+* The DS token moved to `storage/passwords`, so no cleartext secrets remain in `.conf` files. Committed secrets and `local/` were removed.
+* A new authenticated, capability-protected REST endpoint sends to the DS. Users no longer need `list_storage_passwords`.
+* TLS verification is on by default, with an optional CA bundle.
+* The form previews via a DS dry run, and consent can't be skipped. Junk "pong"/"test" payloads are no longer sent.
+* The precedence option is now `high` (older DS builds expected `high`, but the form sent `higher`).
+* `| sendpayload` was rewritten on Splunk SDK 3.0.1 (chunked protocol). It reports the real DS result.
+* Python 3 only: targets Python 3.13/3.14 (`python.required`) on Splunk 10.2+. Bundled `six` and Python 2 compatibility code were removed.
+* The scripted inputs were fixed: there was a missing `monitor_ds_connection.py`, and an empty interval from the setup page.
+  They now use `passAuth` and ship disabled until setup is done.
+* Setup page: password field, pre-filled from the current config, validation, a real `setup_view`, and correct `is_configured` handling.
+* Metadata restricts admin objects to admin roles. Nothing is exported globally.
+
+## Roadmap
+
+* Get the list of forwarders from the DS so users can pick hosts.
+* Move the UI to Dashboard Studio or a UCC/React app, since Simple XML custom JS is deprecated in Splunk Cloud.

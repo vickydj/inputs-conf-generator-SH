@@ -1,0 +1,14 @@
+# Python bytecode
+*.py[cod]
+__pycache__/
+
+# Instance-specific state (credentials, local overrides) must never be committed or packaged
+local/
+metadata/local.meta
+*.backup
+*.tar.gz
+*.spl
+
+# Build output from ci/validate_app.py
+dist/
+*.tgz
