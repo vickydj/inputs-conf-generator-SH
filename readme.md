@@ -4,6 +4,13 @@ Search-head half of the Input Conf Generator. It needs
 [`input_conf_generator_ds`](https://github.com/vickydj/inputs-conf-generator-DS)
 on the deployment server, and the setup page must be completed.
 
+## Requirements
+
+* Splunk Enterprise **10.2+** (or Splunk Cloud) with **Python 3.13 or 3.14**. Scripts declare
+  `python.required = 3.13, 3.14`. Python 2 and older Python 3 runtimes aren't supported.
+* Vendored [Splunk SDK for Python](https://github.com/splunk/splunk-sdk-python) **3.0.1** in `bin/`
+  (`splunklib/` plus its `splunk_sdk-3.0.1.dist-info/`, which the SDK needs at runtime).
+
 ## How it works
 
 ```
@@ -58,9 +65,20 @@ This calls the same endpoint as the dashboard, so the same capability check appl
 
 ## Development
 
+Use Python 3.13+.
+
 ```bash
 python3 -m unittest discover -s tests   # no Splunk needed; runs an HTTPS end-to-end test against
                                         # the DS handler if ../inputs-conf-generator-DS exists
+```
+
+To update the SDK, reinstall it into `bin/` with its metadata, then delete the optional `ai` package
+(it needs extra dependencies, and the core SDK doesn't import it):
+
+```bash
+rm -rf bin/splunklib bin/splunk_sdk-*.dist-info
+python3.13 -m pip install --no-deps --no-compile --target bin splunk-sdk==<version>
+rm -rf bin/splunklib/ai
 ```
 
 Leave `tests/`, `.git` and `local/` out of the package. Check it with
@@ -75,7 +93,8 @@ Leave `tests/`, `.git` and `local/` out of the package. Check it with
 * TLS verification is on by default, with an optional CA bundle.
 * The form previews via a DS dry run, and consent can't be skipped. Junk "pong"/"test" payloads are no longer sent.
 * The precedence option is now `high` (older DS builds expected `high`, but the form sent `higher`).
-* `| sendpayload` was rewritten on splunklib 2.1.1 (chunked protocol). It reports the real DS result.
+* `| sendpayload` was rewritten on Splunk SDK 3.0.1 (chunked protocol). It reports the real DS result.
+* Python 3 only: targets Python 3.13/3.14 (`python.required`) on Splunk 10.2+. Bundled `six` and Python 2 compatibility code were removed.
 * The scripted inputs were fixed: there was a missing `monitor_ds_connection.py`, and an empty interval from the setup page.
   They now use `passAuth` and ship disabled until setup is done.
 * Setup page: password field, pre-filled from the current config, validation, a real `setup_view`, and correct `is_configured` handling.

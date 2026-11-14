@@ -15,6 +15,7 @@ import tempfile
 import threading
 import types
 import unittest
+from unittest import mock
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
@@ -70,6 +71,35 @@ class PrepareTests(unittest.TestCase):
         self.assertEqual(common.kv_event(a='x"y', b="1\n2"), 'a="x\\"y" b="1 2"')
 
 
+class VendoredSdkTests(unittest.TestCase):
+    """splunklib 3.x reads its version from package metadata on every request,
+    so bin/ must ship splunk_sdk-*.dist-info next to splunklib/."""
+
+    def test_sdk_request_path_works(self):
+        import importlib.metadata
+        self.assertTrue(importlib.metadata.version("splunk-sdk").startswith("3."))
+
+        seen = {}
+
+        class Splunkd(BaseHTTPRequestHandler):
+            def do_GET(self):
+                seen["auth"], seen["path"] = self.headers.get("Authorization"), self.path
+                self.send_response(200); self.end_headers(); self.wfile.write(b"{}")
+
+            def log_message(self, *args):
+                pass
+
+        server = HTTPServer(("127.0.0.1", 0), Splunkd)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            service = common.service_from_token("sessionkey", f"http://127.0.0.1:{server.server_port}")
+            self.assertEqual(service.get("/services/server/info").status, 200)
+        finally:
+            server.shutdown()
+        self.assertEqual(seen["auth"], "Splunk sessionkey")
+        self.assertTrue(seen["path"].startswith("/services/server/info"))
+
+
 @unittest.skipUnless(DS_BIN.exists() and shutil.which("openssl"), "DS repo or openssl not available")
 class EndToEndTests(unittest.TestCase):
     @classmethod
@@ -112,12 +142,12 @@ class EndToEndTests(unittest.TestCase):
     def call(self, body, token="good-token", ca=None):
         settings = {"ds_host": "localhost", "ds_mgmt_port": self.server.server_port, "ssl_verify": True,
                     "ca_cert_path": str(ca or self.cert)}
-        common.service_from_token = lambda *a, **k: object()
-        common.get_settings = lambda service: settings
-        common.get_ds_token = lambda service: token
         envelope = {"method": "POST", "payload": json.dumps(body), "session": {"user": "alice"},
                     "system_authtoken": "x", "server": {"rest_uri": "https://127.0.0.1:8089"}}
-        return send_payload_handler.SendPayloadHandler("", "").handle(json.dumps(envelope))
+        with mock.patch.object(common, "service_from_token", lambda *a, **k: object()), \
+                mock.patch.object(common, "get_settings", lambda service: settings), \
+                mock.patch.object(common, "get_ds_token", lambda service: token):
+            return send_payload_handler.SendPayloadHandler("", "").handle(json.dumps(envelope))
 
     def test_dry_run_then_send(self):
         r = self.call({"payload": form(), "dry_run": True})
