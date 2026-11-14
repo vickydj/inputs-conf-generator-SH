@@ -187,3 +187,50 @@
     margin: 20px 0;
   }
   
+  /* Inline field validation */
+  .field-error {
+    color: #dc2626;
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
+  .form-group input.input-error,
+  .form-group select.input-error {
+    border-color: #dc2626;
+  }
+
+  .field-hint {
+    color: #64748b;
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
+  /* Deployment client picker on the payload page */
+  .client-picker {
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 8px;
+    margin-top: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  .client-picker input {
+    margin-bottom: 6px;
+  }
+
+  .client-chip {
+    display: inline-block;
+    margin: 2px 4px 2px 0;
+    padding: 2px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    background: #f8fafc;
+    cursor: pointer;
+    font-size: 12px;
+  }
+
+  .client-chip.selected {
+    background: #dbeafe;
+    border-color: #3b82f6;
+  }

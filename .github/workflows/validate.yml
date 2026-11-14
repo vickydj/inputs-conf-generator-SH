@@ -22,12 +22,19 @@ jobs:
         with:
           python-version: "3.13"
 
+      - uses: actions/setup-node@v4
+        with:
+          # 22+ loads the ES module views/validators.js without a package.json.
+          node-version: "22"
+
       - name: Install tools
         # requests ships with Splunk but not with the runner's Python.
         run: pip install -q requests "splunk-appinspect==4.4.0"
 
       - name: Tests
-        run: python -m unittest discover -s tests -v
+        run: |
+          python -m unittest discover -s tests -v
+          node --test tests/*.test.mjs
 
       # The checks below catch what this repo has shipped before and AppInspect does not flag.
       - name: No instance state or secrets committed
