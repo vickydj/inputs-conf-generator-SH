@@ -31,10 +31,13 @@ This app only works if the peer - ds app is installed <app name>, and set up pag
 
 ### Before merging
 
-Every pull request runs `.github/workflows/validate.yml`. It runs the tests, then `ci/validate_app.py`
-(hygiene, secrets, security, `.conf` sanity, JavaScript syntax, AppInspect).
-Make **Validate Splunk app** a required status check on `master`. To run it locally:
-`python3 -m unittest discover -s tests && python3 ci/validate_app.py`.
+Every pull request runs `.github/workflows/validate.yml`. It fails if:
+- a test fails;
+- `local/`, `local.meta`, `*.backup`, a token, a `$7$` secret or a private key is committed;
+- a REST endpoint skips authentication, `web.conf` exposes an endpoint, or Python turns off TLS verification;
+- Splunk AppInspect (precert) reports any failure.
+
+Make **Validate Splunk app** a required status check on `master`. Locally, `python3 -m unittest discover -s tests` runs the tests.
 
 Requires Splunk Enterprise 10.2+ (Python 3.13/3.14).
 

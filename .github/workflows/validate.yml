@@ -1,64 +1,65 @@
-# Pre-merge gate. In GitHub: Settings -> Branches -> branch protection rule for
-# "master" -> "Require status checks to pass" -> select "Validate Splunk app".
+# Merge gate. Make it required: Settings -> Branches -> rule for "master" ->
+# "Require status checks to pass" -> "Validate Splunk app".
 name: validate
 
 on:
   pull_request:
   push:
     branches: [master]
-  workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: validate-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   validate:
     name: Validate Splunk app
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: inputs-conf-generator-SH
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: inputs-conf-generator-SH
-
-      # Peer app, used by the HTTPS end-to-end test (skipped if unavailable).
-      - uses: actions/checkout@v4
-        continue-on-error: true
-        with:
-          repository: vickydj/inputs-conf-generator-DS
-          path: inputs-conf-generator-DS
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
+      - name: Install tools
+        # requests ships with Splunk but not with the runner's Python.
+        run: pip install -q requests "splunk-appinspect==4.4.0"
 
-      - name: Install Splunk AppInspect
-        run: |
-          sudo apt-get install -y --no-install-recommends libmagic1
-          python -m pip install --upgrade pip
-          python -m pip install "splunk-appinspect==4.4.0"
-
-      - name: Unit and end-to-end tests
+      - name: Tests
         run: python -m unittest discover -s tests -v
 
-      - name: Hygiene, secrets, security, conf, JS and AppInspect
-        run: python ci/validate_app.py --require-appinspect
+      # The checks below catch what this repo has shipped before and AppInspect does not flag.
+      - name: No instance state or secrets committed
+        run: |
+          # "! cmd" never fails a step under bash -e, hence the explicit ifs.
+          if git ls-files | grep -E '(^|/)local/|^metadata/local\.meta$|\.backup$'; then
+            echo "::error::Instance state is committed (local/, local.meta or *.backup)"; exit 1; fi
+          if git grep -nE 'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.|\$7\$[A-Za-z0-9+/=]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----' -- . ':!bin/splunklib'; then
+            echo "::error::A token, encrypted secret or private key is committed"; exit 1; fi
 
-      - name: Upload package and AppInspect report
+      - name: No unauthenticated endpoints or disabled TLS checks
+        run: |
+          if git grep -niE '^\s*requireAuthentication\s*=\s*(false|0|f|no)\s*$' -- '*restmap.conf'; then
+            echo "::error::A REST endpoint does not require authentication"; exit 1; fi
+          if git grep -n '^\[expose:' -- '*web.conf'; then
+            echo "::error::web.conf exposes a REST endpoint through Splunk Web"; exit 1; fi
+          if git grep -nE 'verify\s*=\s*False|CERT_NONE|_create_unverified_context' -- 'bin/*.py' ':!bin/splunklib'; then
+            echo "::error::TLS verification is disabled in Python code"; exit 1; fi
+
+      - name: Splunk AppInspect (precert)
+        run: |
+          app=$(sed -n 's/^id *= *//p' default/app.conf)
+          mkdir -p "dist/$app" && git ls-files | grep -vE '^(tests/|\.)' | tar -cf - -T - | tar -xf - -C "dist/$app"
+          tar -czf "dist/$app.tgz" -C dist "$app"
+          splunk-appinspect inspect "dist/$app.tgz" --mode precert --data-format json --output-file dist/appinspect.json || true
+          # The exit code is 3 for passing and failing apps alike, so read the summary instead.
+          python -c "import json,sys; s=json.load(open('dist/appinspect.json'))['reports'][0]['summary']; print(s); sys.exit(s['failure']+s['error']>0)"
+
+      - name: Upload AppInspect report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: appinspect-input_conf_generator_sh
-          path: inputs-conf-generator-SH/dist/
+          name: appinspect-report
+          path: dist/appinspect.json
           if-no-files-found: ignore

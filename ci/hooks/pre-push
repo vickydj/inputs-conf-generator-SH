@@ -1,8 +1,0 @@
-#!/bin/sh
-# Optional local gate: runs the same checks as CI before every push.
-# Enable once per clone:   git config core.hooksPath ci/hooks
-# Bypass in an emergency:  git push --no-verify   (CI still blocks the merge)
-set -e
-cd "$(git rev-parse --show-toplevel)"
-python3 -m unittest discover -s tests
-python3 ci/validate_app.py
