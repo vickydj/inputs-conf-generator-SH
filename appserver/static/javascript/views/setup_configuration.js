@@ -2,7 +2,7 @@ import { promisify } from './util.js'
 import * as SplunkHelpers from './splunk_helpers.js'
 
 //create ds_info.conf
-async function create_custom_configuration_file(  splunk_js_sdk_service,  ds_host,  ds_mgmt_port,  ds_token ) 
+async function create_custom_configuration_file(  splunk_js_sdk_service,  ds_host,  ds_mgmt_port ) 
 {
   console.log("Updating ds_info.conf")
   var custom_configuration_file_name = "ds_info";

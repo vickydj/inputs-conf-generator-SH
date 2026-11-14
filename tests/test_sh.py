@@ -45,27 +45,69 @@ class DsClientTests(unittest.TestCase):
                 ds_client.get_ds("key")
 
 
+    def test_bad_host_in_conf_is_rejected(self):
+        conf.write_text("[properties]\nds_host = evil.com/x?\nds_mgmt_port = 8089\n")
+        with self.assertRaises(RuntimeError):
+            ds_client.get_ds("key")
+
+    def test_ipv6_host_is_bracketed(self):
+        conf.write_text("[properties]\nds_host = ::1\nds_mgmt_port = 8089\n")
+        self.assertEqual(ds_client.get_ds("key")[0], "https://[::1]:8089")
+
+
 class HandlerTests(unittest.TestCase):
-    def call(self):
-        envelope = {"payload": '{"message": "x"}', "system_authtoken": "sys", "session": {"user": "alice"}}
+    def call(self, rest_path="/input_conf_generator/send", payload='{"message": "x", "submitted_by": "mallory"}'):
+        envelope = {"payload": payload, "system_authtoken": "sys", "session": {"user": "alice"}, "rest_path": rest_path}
         return send_payload_handler.SendPayloadHandler("", "").handle(json.dumps(envelope))
 
-    def test_forwards_body_with_token_and_returns_ds_answer(self):
+    def ds(self, status=200, body=None):
+        body = body if body is not None else {}
+        answer = mock.Mock(status_code=status, ok=status < 400, text=json.dumps(body), json=lambda: body)
+        return mock.patch.object(ds_client.requests, "request", return_value=answer)
+
+    def test_forwards_body_with_token_and_user_and_returns_ds_answer(self):
         write_conf()
-        answer = mock.Mock(status_code=400, text="{}", json=lambda: {"status": "error", "errors": ["bad"]})
-        with mock.patch.object(send_payload_handler.requests, "post", return_value=answer) as post:
+        with self.ds(400, {"status": "error", "errors": ["bad"]}) as request:
             result = self.call()
         self.assertEqual(result, {"payload": {"status": "error", "errors": ["bad"]}, "status": 400})
-        args, kwargs = post.call_args
-        self.assertEqual(args[0], "https://ds1:8089/services/receive_payload")
+        args, kwargs = request.call_args
+        self.assertEqual(args, ("POST", "https://ds1:8089/services/receive_payload"))
         self.assertEqual(kwargs["headers"]["Authorization"], "Bearer tok")
-        self.assertEqual(kwargs["data"], b'{"message": "x"}')
+        # the browser cannot pick the submitter: the session user wins
+        self.assertEqual(json.loads(kwargs["data"]), {"message": "x", "submitted_by": "alice"})
         self.assertIs(kwargs["verify"], True)
+
+    def test_non_object_body_is_400(self):
+        write_conf()
+        for body in ("not json", "[1, 2]"):
+            self.assertEqual(self.call(payload=body)["status"], 400)
 
     def test_unreachable_ds_is_502(self):
         write_conf()
-        with mock.patch.object(send_payload_handler.requests, "post", side_effect=OSError("refused")):
+        with mock.patch.object(ds_client.requests, "request", side_effect=OSError("refused")):
             self.assertEqual(self.call()["status"], 502)
+
+    def test_clients_are_listed_sorted(self):
+        write_conf()
+        entries = {"entry": [{"content": {"hostname": "web02", "ip": "10.0.0.2", "clientName": "c2"}},
+                             {"content": {"hostname": "", "dns": "Web01", "ip": "10.0.0.1"}},
+                             {"content": {"ip": "10.0.0.3"}}]}
+        with self.ds(200, entries) as request:
+            result = self.call("/input_conf_generator/clients")
+        self.assertEqual(request.call_args.args[1], "https://ds1:8089/services/deployment/server/clients")
+        self.assertEqual([c["hostname"] for c in result["payload"]["clients"]], ["Web01", "web02"])
+
+    def test_connection_test(self):
+        write_conf()
+        info = {"entry": [{"content": {"serverName": "ds1", "version": "10.2.0"}}]}
+        with self.ds(200, info):
+            result = self.call("/input_conf_generator/test")
+        self.assertEqual(result["status"], 200)
+        self.assertIn("ds1", result["payload"]["message"])
+        with self.ds(401):
+            result = self.call("/input_conf_generator/test")
+        self.assertEqual(result["status"], 502)
+        self.assertIn("token rejected", result["payload"]["message"])
 
 
 if __name__ == "__main__":

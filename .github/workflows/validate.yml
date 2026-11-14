@@ -22,12 +22,25 @@ jobs:
         with:
           python-version: "3.13"
 
+      - uses: actions/setup-node@v4
+        with:
+          # 22+ loads the ES module views/validators.js without a package.json.
+          node-version: "22"
+
       - name: Install tools
         # requests ships with Splunk but not with the runner's Python.
-        run: pip install -q requests "splunk-appinspect==4.4.0"
+        run: |
+          pip install -q requests "splunk-appinspect==4.4.0" "vermin==1.9.2" "uv==0.9.5"
 
-      - name: Tests
-        run: python -m unittest discover -s tests -v
+      - name: Tests (Python 3.13 and 3.9)
+        run: |
+          python -m unittest discover -s tests -v
+          # Splunk 9.3/9.4 run 3.9 (python.required). setup-python has no 3.9 for ubuntu-latest (26.04); uv does.
+          uv run -q --no-project --python 3.9 --with requests python -m unittest discover -s tests
+          node --test tests/*.test.mjs
+
+      - name: Python 3.7 compatible (Splunk 9.0-9.2)
+        run: vermin --no-tips --violations -t=3.7- bin/
 
       # The checks below catch what this repo has shipped before and AppInspect does not flag.
       - name: No instance state or secrets committed
