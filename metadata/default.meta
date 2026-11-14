@@ -32,26 +32,17 @@ owner = admin
 version = 9.3.1
 modtime = 1732705277.205246000
 
-[views/input_config_generator_dashboard]
-version = 9.3.1
-modtime = 1732283796.088097000
 
-[inputs/test]
-owner = admin
-version = 9.3.1
-modtime = 1732220987.533089000
 
 [inputs/script%3A%2F%2F%24SPLUNK_HOME%2Fetc%2Fapps%2Finput_conf_generator_sh%2Fbin%2Frequest_reload_srv_class.py]
 owner = admin
 version = 9.3.1
 modtime = 1732705277.322399000
 
-[inputs/script%3A%2F%2F%24SPLUNK_HOME%2Fetc%2Fapps%2Finput_conf_generator_sh%2Fbin%2Fsendpayload.py]
-owner = admin
-version = 9.3.1
-modtime = 1732219093.696731000
 
 [passwords/credential%3Ads_auth_token%3Anobody%3A]
+access = read : [ admin ], write : [ admin ]
+export = none
 owner = admin
 version = 9.3.1
 modtime = 1732705277.408028000

@@ -13,26 +13,36 @@ This app only works if the peer - ds app is installed <app name>, and set up pag
 
 - Dashboard calls custom command which invokes python to send payload to DS.
 
-- Store the payload in a text file, for reference.
+- Generates the payload, then sends it only after the consent box is ticked and Submit is pressed.
 
 ### Setup page
 
-- This is admin configurable from JS setup page.
+- Admin only. Asks for the DS host, port and auth token.
+- The token is stored encrypted in storage/passwords (`ds_auth_token`). It is never written to `ds_info.conf`.
+- Use a token of a DS account that has only the `input_conf_generator_sender` role (defined by the DS app).
+- TLS to the DS is verified by default. If the DS uses a private CA, set `ssl_verify = <path to CA .pem>` in
+  `local/ds_info.conf`. `ssl_verify = false` turns verification off; use that for labs only. See `README/ds_info.conf.spec`.
 
-- ds_info.conf is created with host, port and token.
+### Who can send
 
-- Token is stored as clear text in ds_info.conf
+- Sending goes through the endpoint `/services/input_conf_generator/send`. Only roles with the
+  `input_conf_generator_send` capability can call it: `admin` and `power` by default (`default/authorize.conf`).
+- The endpoint reads the token itself, so users never see it.
 
-- Encrypted in passwords.conf with password storage endpoint. (unread as of now)
+### Before merging
 
+Every pull request runs `.github/workflows/validate.yml`. It runs the tests, then `ci/validate_app.py`
+(hygiene, secrets, security, `.conf` sanity, JavaScript syntax, AppInspect).
+Make **Validate Splunk app** a required status check on `master`. To run it locally:
+`python3 -m unittest discover -s tests && python3 ci/validate_app.py`.
+
+Requires Splunk Enterprise 10.2+ (Python 3.13/3.14).
 
 ## Feature enhancements:
 
 • Get list of UF from DS, read token from ds_info.conf
 
 • Add username to payload. And add in inputs.conf.
-
-• Read password from endpoint and remove from ds_info.conf
 
 • Populate setup page if configured.
 

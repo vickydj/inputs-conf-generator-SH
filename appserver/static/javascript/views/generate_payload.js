@@ -39,16 +39,6 @@ define([
           throw new Error('Could not get default token model');
         }
 
-        Logger.info("Token initialization successful");
-        
-        // Read and log field1 value
-        const field1Value = defaultTokens.get("field1");
-        Logger.info("Field1 token value:", field1Value); 
-        
-        // Set jspayload value
-        defaultTokens.set("jspayload", "pong");
-        Logger.info("jspayload token value:", defaultTokens.get("jspayload")); 
-
         return defaultTokens;
       } catch (error) {
         Logger.error("Error initializing tokens:", error);
@@ -72,7 +62,6 @@ define([
         app_name: '',
         environment: '',
         version: '1.0.0',
-        isSubmitting: false,
         generatedPayload: null,
         copySuccess: false
       };
@@ -83,79 +72,14 @@ define([
       this.tokens = null;
     }
 
-    shapeString(input) {
-      // Convert JSON object to string
-      let jsonString = JSON.stringify(input, null, 2);
-      
-      // Replace double quotes with single quotes
-      jsonString = jsonString.replace(/"/g, "'");
-      
-      // Remove extra spaces around colons
-      jsonString = jsonString.replace(/:\s+/g, ': ');
-      
-      return jsonString;
+    componentDidMount() {
+      this.tokens = TokenManager.initialize();
     }
 
-    
-    componentDidMount() {
-      // Initialize tokens when component mounts
-      this.tokens = TokenManager.initialize();
-    
-      if (this.tokens) {
-        // Initialize component with token value if it exists
-        const field1Value = this.tokens.get("field1");
-        if (field1Value) {
-          // this.setState({ message_payload: field1Value });
-          Logger.info("mount : field1 " + field1Value);
-        }
-    
-        // Add token change listener
-        this.tokens.on("change:field1", this.handleTokenChange.bind(this));
-      }
-    }
-    
-    handleTokenChange(model, value, options) {
-      Logger.info("Token changed field1:", value);
-      // this.setState({ message_payload: value });
-    }
-    
-    componentWillUnmount() {
-      // Clean up token listeners
-      if (this.tokens) {
-        this.tokens.off("unmount change:field1", this.handleTokenChange);
-      }
-    }
-   
     handleChange(event) {
       const { name, value } = event.target;
-      Logger.info(`Form field changed: ${name}`, { value });
-    
-      try {
-        this.setState(
-          prevState => ({ ...prevState, [name]: value }),
-          () => {
-            // Update tokens when relevant fields change
-            if (name === 'message_payload' && this.tokens) {
-              // this.tokens.set("jspayload", value);
-            }
-    
-            // Update field1 token with the generated payload
-            if (name === 'precedence' && this.tokens) {
-              // const payload = this.generatePayload();
-
-              // this.tokens.set("field1", JSON.stringify(payload, null, 2));
-              this.tokens.set("field1", value)
-              Logger.info("Token field1 updated:", this.tokens.get("field1"));
-              
-            }
-          }
-        );
-      } catch (error) {
-        Logger.error('Error updating state:', error);
-      }
+      this.setState(prevState => ({ ...prevState, [name]: value }));
     }
-
-
 
     generatePayload() {
       const sourceArray = this.state.my_source.split(',').map(item => item.trim());
@@ -192,31 +116,25 @@ define([
 
     
 
-    async handleSubmit(event) {
+    handleSubmit(event) {
       event.preventDefault();
-      this.setState({ isSubmitting: true });
-      this.tokens.set("jspayload", "test");
-
       const payload = this.generatePayload();
-      this.setState({ generatedPayload: payload }, () => {
-        Logger.info('Generated payload:', payload);
-        if (this.tokens) {
-          try {
-            const payloadString = JSON.stringify(payload, null, 2);
-            const shaped_payload=this.shapeString(payloadString)
-            Logger.info('Shaped payload:', shaped_payload);
-            this.tokens.set("jspayload", shaped_payload);
-            Logger.info("Token jspayload updated:", this.tokens.get("jspayload"));
-            alert("Cheers !! Payload generated, now you can hit the agree checkbox and submit on the top of the page !!")
-          } catch (error) {
-            Logger.error("Error setting token:", error);
-          }
-        }
-      });
-
-      this.setState({ isSubmitting: false });
+      this.setState({ generatedPayload: payload });
+      if (!this.tokens) {
+        Logger.error("Token model not available");
+        return;
+      }
+      // base64 keeps quotes, $ and backslashes from breaking out of the SPL string.
+      const json = JSON.stringify(payload);
+      this.tokens.set("jspayload", btoa(String.fromCharCode(...new TextEncoder().encode(json))));
+      // A new payload needs fresh consent before it is sent.
+      this.tokens.unset("consent_token1");
+      const submitted = SplunkMVC.Components.get("submitted");
+      if (submitted) {
+        submitted.unset("consent_token1");
+      }
+      alert("Payload generated. Check the payload below, tick the consent box at the top and press Submit to send it.");
     }
-
 
     render() {
       return e("div", { className: "setup-container" }, [
@@ -259,7 +177,7 @@ define([
             }, [
               e("option", { value: "low" }, "Low"),
               e("option", { value: "normal" }, "Normal"),
-              e("option", { value: "higher" }, "Higher")
+              e("option", { value: "high" }, "High")
             ])
           ]),
           // Index
@@ -357,9 +275,8 @@ define([
           e("div", { className: "form-group" }, 
             e("input", { 
               type: "submit", 
-              value: this.state.isSubmitting ? "Generating..." : "Generate Payload", 
-              className: "submit-button",
-              disabled: this.state.isSubmitting
+              value: "Generate Payload",
+              className: "submit-button"
             })
           )
         ]),

@@ -1,0 +1,64 @@
+# Pre-merge gate. In GitHub: Settings -> Branches -> branch protection rule for
+# "master" -> "Require status checks to pass" -> select "Validate Splunk app".
+name: validate
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate Splunk app
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: inputs-conf-generator-SH
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: inputs-conf-generator-SH
+
+      # Peer app, used by the HTTPS end-to-end test (skipped if unavailable).
+      - uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          repository: vickydj/inputs-conf-generator-DS
+          path: inputs-conf-generator-DS
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Splunk AppInspect
+        run: |
+          sudo apt-get install -y --no-install-recommends libmagic1
+          python -m pip install --upgrade pip
+          python -m pip install "splunk-appinspect==4.4.0"
+
+      - name: Unit and end-to-end tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Hygiene, secrets, security, conf, JS and AppInspect
+        run: python ci/validate_app.py --require-appinspect
+
+      - name: Upload package and AppInspect report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appinspect-input_conf_generator_sh
+          path: inputs-conf-generator-SH/dist/
+          if-no-files-found: ignore

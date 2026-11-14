@@ -25,24 +25,9 @@
     <panel depends="$consent_token1$">
       <title>Payload preflight to DS</title>
       <table>
-        <title>Json deconstructed to support Splunk integration</title>
+        <title>Send result</title>
         <search>
-          <query>| makeresults 
-| eval payload="$jspayload$"
-| eval output=case(
-    "$consent_token1$"=="I agree and take responsibility of my action to set splunk monitor the mentioned files in mentioned hosts.", payload,
-    1==1, "Generate payload and hit the agree checkbox to proceed"
-  ) | table output</query>
-          <earliest>0</earliest>
-          <latest></latest>
-        </search>
-        <option name="drilldown">none</option>
-        <option name="refresh.display">preview</option>
-      </table>
-      <table>
-        <title>Send payload &lt;no preview&gt;</title>
-        <search>
-          <query>| makeresults | eval payload="$jspayload$" | sendpayload payload</query>
+          <query>| makeresults | eval payload="$jspayload$", consent="$consent_token1$" | sendpayload</query>
           <earliest>0</earliest>
           <latest></latest>
         </search>
