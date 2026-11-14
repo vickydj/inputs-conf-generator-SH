@@ -1,0 +1,11 @@
+# Python bytecode
+*.py[cod]
+__pycache__/
+
+# Instance state (credentials, local overrides) and build output
+local/
+metadata/local.meta
+*.backup
+dist/
+*.tgz
+*.spl

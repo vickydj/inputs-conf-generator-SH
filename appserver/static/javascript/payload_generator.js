@@ -23,19 +23,5 @@ require([
         return;
     }
 
-    // Create a div for payload display if it doesn't exist
-    if (!document.getElementById('payload_display')) {
-        const payloadDiv = document.createElement('div');
-        payloadDiv.id = 'payload_display';
-        container.appendChild(payloadDiv);
-    }
-
-    if (!document.getElementById('ds_conn_test')) {
-        const ds_conn_test_Div = document.createElement('div');
-        ds_conn_test_Div.id = 'ds_conn_test';
-        container.appendChild(ds_conn_test_Div);
-        
-    }
-
     ReactDOM.render(myApp, container);
 });

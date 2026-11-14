@@ -10,7 +10,7 @@ async function create_custom_configuration_file(  splunk_js_sdk_service,  ds_hos
   var properties_to_update = {
       ds_host: ds_host,
       ds_mgmt_port: ds_mgmt_port,
-      ds_token: ds_token,
+      ds_token: "",  // the token lives in storage/passwords; blank any old cleartext copy
     };
 
   await SplunkHelpers.update_configuration_file(splunk_js_sdk_service,custom_configuration_file_name,stanza_name,properties_to_update,);

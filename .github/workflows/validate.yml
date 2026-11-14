@@ -1,0 +1,65 @@
+# Merge gate. Make it required: Settings -> Branches -> rule for "master" ->
+# "Require status checks to pass" -> "Validate Splunk app".
+name: validate
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Splunk app
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install tools
+        # requests ships with Splunk but not with the runner's Python.
+        run: pip install -q requests "splunk-appinspect==4.4.0"
+
+      - name: Tests
+        run: python -m unittest discover -s tests -v
+
+      # The checks below catch what this repo has shipped before and AppInspect does not flag.
+      - name: No instance state or secrets committed
+        run: |
+          # "! cmd" never fails a step under bash -e, hence the explicit ifs.
+          if git ls-files | grep -E '(^|/)local/|^metadata/local\.meta$|\.backup$'; then
+            echo "::error::Instance state is committed (local/, local.meta or *.backup)"; exit 1; fi
+          if git grep -nE 'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.|\$7\$[A-Za-z0-9+/=]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----' -- . ':!bin/splunklib'; then
+            echo "::error::A token, encrypted secret or private key is committed"; exit 1; fi
+
+      - name: No unauthenticated endpoints or disabled TLS checks
+        run: |
+          if git grep -niE '^\s*requireAuthentication\s*=\s*(false|0|f|no)\s*$' -- '*restmap.conf'; then
+            echo "::error::A REST endpoint does not require authentication"; exit 1; fi
+          if git grep -n '^\[expose:' -- '*web.conf'; then
+            echo "::error::web.conf exposes a REST endpoint through Splunk Web"; exit 1; fi
+          if git grep -nE 'verify\s*=\s*False|CERT_NONE|_create_unverified_context' -- 'bin/*.py' ':!bin/splunklib'; then
+            echo "::error::TLS verification is disabled in Python code"; exit 1; fi
+
+      - name: Splunk AppInspect (precert)
+        run: |
+          app=$(sed -n 's/^id *= *//p' default/app.conf)
+          mkdir -p "dist/$app" && git ls-files | grep -vE '^(tests/|\.)' | tar -cf - -T - | tar -xf - -C "dist/$app"
+          tar -czf "dist/$app.tgz" -C dist "$app"
+          splunk-appinspect inspect "dist/$app.tgz" --mode precert --data-format json --output-file dist/appinspect.json || true
+          # The exit code is 3 for passing and failing apps alike, so read the summary instead.
+          python -c "import json,sys; s=json.load(open('dist/appinspect.json'))['reports'][0]['summary']; print(s); sys.exit(s['failure']+s['error']>0)"
+
+      - name: Upload AppInspect report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appinspect-report
+          path: dist/appinspect.json
+          if-no-files-found: ignore
